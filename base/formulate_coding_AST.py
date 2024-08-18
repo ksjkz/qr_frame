@@ -141,6 +141,12 @@ class ExpressionTree:
         '''
         return self._preorder_traversal(self.root)
     
+    def get_time_series_lenth(self):
+        '''
+        获取时间序列长度
+        '''
+        return compute_time_series_length(self.root)
+    
 '''
 # 示例表达式
 expression = "div(ts_std(sub(ADJ_D_HIGH, ADJ_D_LOW), 10), ts_mean(sub(ADJ_D_HIGH, ADJ_D_LOW), 10))*sqrt(YUAN_VOLUME)"
@@ -367,6 +373,51 @@ def find_Max_Number_In_Formulate(input_str:str)->int:
           return max_number
 
 
+def compute_time_series_length(node, cumulative_length=0,print_opt=False):
+    """
+    返回值 公式时序长度
+    df前多少列为naN
+   
+    """
+    if re.match(r"^ts_", node.value):#处理时序操作符
+        if print_opt:
+            print(node.value)
+       
+        lenth_list=[]
+        for i in node.children:
+            if isinstance(i.value, int):
+               ts_length= i.value
+               if print_opt:
+                   print(ts_length)
+               pass
+            else:
+                pre_length=compute_time_series_length(i, cumulative_length)
+                lenth_list.append(pre_length)
+     
+
+        return  max(lenth_list)+ ts_length-1
+    
+    
+    # 处理末端节点(列名orconstant)
+    elif node.value in columns_list or isinstance(node.value, int):
+        if print_opt:
+            print(node.value)
+        # 无时序影响，返回当前的累计长度
+        return cumulative_length
+    
+    else:#处理无时序多元操作符
+        if print_opt:
+           print(node.value)
+        lenth_list=[]
+        # 递归计算左右子节点的时序长度，并取最大值
+        for i in node.children:
+           ts_length = compute_time_series_length(i, cumulative_length)
+           lenth_list.append(ts_length)
+        return max(lenth_list)
+    
+
+
+
 def f_coding(input:dict,df:pd.DataFrame,drop_opt=True)-> str:
     '''
     输入dict形如:
@@ -423,7 +474,9 @@ def f_coding(input:dict,df:pd.DataFrame,drop_opt=True)-> str:
 
     df.rename(columns={name_old: name_new}, inplace=True)
     print(f'\n----df的最后一列重新命名为{name_new}-----------')
-    mm=find_Max_Number_In_Formulate(input['Factor Formula'])
+
+
+    mm=expr_tree.get_time_series_length()
     if mm !=0:
        indices = df.groupby('TICKER').apply(lambda x: x.head(mm).index).explode().values
        df.loc[indices,name_new]=None
