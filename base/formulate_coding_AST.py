@@ -476,7 +476,7 @@ def f_coding(input:dict,df:pd.DataFrame,drop_opt=True)-> str:
     print(f'\n----df的最后一列重新命名为{name_new}-----------')
 
 
-    mm=expr_tree.get_time_series_length()
+    mm=expr_tree.get_time_series_lenth()
     if mm !=0:
        indices = df.groupby('TICKER').apply(lambda x: x.head(mm).index).explode().values
        df.loc[indices,name_new]=None
