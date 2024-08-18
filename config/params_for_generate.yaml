@@ -1,0 +1,176 @@
+input_params1:
+  factor_terms:
+    - Closing Price
+    - Opening Price
+    - Highest Price
+    - Lowest Price
+    - Trading Volume
+    - Price-to-Book Ratio
+    - Market Capitalization
+    - Daily Return(todays close price - yesterday close price)
+
+  factor_term_names:
+    - ADJ_D_CLOSE
+    - ADJ_D_OPEN
+    - ADJ_D_HIGH
+    - ADJ_D_LOW
+    - YUAN_VOLUME
+    - PB_RATIO
+    - MCAP_IN_CIRCULATION
+    - ONE_DAY_RETURN_PREV
+
+  batch_name: "D"
+
+
+input_params:
+  factor_terms:
+    - 当日开盘相对于前一日收盘涨跌幅
+    - 当日最高相对于前一日收盘涨跌幅
+    - 当日最低相对于前一日收盘涨跌幅
+    - 当日收盘相对于前一日收盘涨跌幅
+    - 当日成交量相对于前一日成交量涨跌幅
+    - 当日PB相对于前一天PB涨跌幅
+    - 对数市值
+    
+
+  factor_term_names:
+    - D_OPEN_CHANGE
+    - D_HIGH_CHANGE
+    - D_LOW_CHANGE
+    - D_CLOSE_CHANGE
+    - D_VOLUME_CHANGE
+    - D_PB_CHANGE
+    - LOG_MCAP
+    
+
+  batch_name: "D"
+
+template: |
+  I currently have these basic factors {factor_terms} for each stock. 
+  Can you generate {factor_num} random factor formula based on these basic factors .
+   这些因子将会被用于预测股票横截面收益的排序, 我们用rankIC_mean来评估因子的预测能力, rankIC_mean越高越好.
+  The random factors should preferably be original, but can also be referenced. The factor formula must be {complexity}.
+
+  Random factor formula format requirements:
+    1. Basic factor format requirements:
+       In the formula, {factor_terms} should be written as {factor_term_names}. The order of the basic factors in the formula should follow this sequence.
+        
+       公式必须写成python的语法格式,可以被抽象语法树解析
+  
+  2. Operator requirements:
+       Operators are divided into element-wise operators and time series operators.
+  
+  ### Element-wise Operators
+  - add X, Y   - sub X, Y  - mul X, Y  - div X, Y - sqrt X - log X - abs X - neg X - inv X - max X, Y - min X, Y - sin X - cos X
+  - tan X - sig X - sign X - ltp X, Y: If X is greater than Y, return 1; otherwise, return 0 - gtp X, Y: If X is less than Y, return 1; otherwise, return 0
+
+  ### Time Series Operators
+  - ts_sum X, N - ts_prod X, N
+  - ts_covariance X, Y, N: Calculate the rolling covariance of X and Y over an N-period window
+  - ts_std X, N - ts_mean X, N
+  - ts_timeweighted_mean X, N: Calculate the rolling time-weighted mean of X over an N-period window
+  - ts_rank X, N: Calculate the rolling rank of X over an N-period window
+  - ts_max X, N - ts_min X, N
+  - ts_argmax X, N: Calculate the time difference between the date of the maximum value of X over the past N periods and the current date
+  - ts_argmin X, N
+  - ts_median X, N
+  - ts_skew X,N
+
+  you should choose Operators from above.
+  please try to use Time Series Operators  more frequency
+     
+  Output format requirements:(only preserve one factor,please strictly follow the format,don't output anything other than the format content)
+  Format as
+  [
+  
+  {{
+    "Factor Name": "{batch_name}_"+'_'+'base on its Explanation, not too long'  # like D_CAPITALIZATION_ADJUSTED_RETURN, you have to replace D.
+    "Factor Formula": "The formula of the random factor"
+    "Explanation": "A very very simple explanation of its meaning and how it is improved"
+  }}
+  ,
+  #这里添加剩下因子,因子个数一共为{factor_num}
+
+  ]
+
+template1: |
+  我现在给你展示一些因子,
+  {factor_example}
+
+  这些因子将会被用于预测股票横截面收益的排序, 我们用rankIC_mean来评估因子的预测能力, rankIC_mean越高越好.
+
+  现在请你分析这些因子, 并
+  - 总结出你认为有效的time-series operator
+  - 总结出你认为有效的factor terms
+  - 总结出你认为有效的element-wise operator
+  - 总结出你认为有效的factor terms组合
+
+  基于以上分析, 请你使用下列方法来生成{factor_num}个新的因子, 以实现更高的rankIC.
+
+  你可以使用的方法包括但不限于:
+  -  (Genetic Programming，GP) 
+  -  (Particle Swarm Optimization，PSO)
+  -  (Simulated Annealing，SA)
+  -  (Differential Evolution，DE)
+  -  (Ant Colony Optimization，ACO)
+  -  (Bee Algorithm，BA)
+  -  (Tabu Search，TS)
+  -  (Artificial Immune System，AIS)
+  -  (Shuffled Frog Leaping Algorithm，SFLA)
+  -  (Cultural Algorithm，CA)
+  -  (Co-Evolution)
+   
+  这个改进后的因子公式必须是{complexity}
+
+  请按照如下格式直接输出改进后的因子(不要输出除了格式内容外的任何东西)
+  在因子公式中, {factor_terms} 必须被写作 {factor_term_names}. 有且只有这些变量.
+  格式为
+  [
+  
+  {{
+    "Factor Name": "{batch_name}_"+'_'+'base on its Explanation, not too long'  # like D_CAPITALIZATION_ADJUSTED_RETURN, you have to replace D.
+    "Factor Formula": "The formula of the random factor"
+    "Explanation": "A very very simple explanation of its meaning and how it is improved"
+  }}
+  ,
+  #这里添加剩下因子,因子个数一共为{factor_num}
+
+  ]
+
+template_backup: |
+  我现在给你展示一些因子,
+  {factor_example}
+
+  现在请你
+  - 总结这些因子有利于提高ic的共性,想办法融合这些因子来生成几个改进因子,使其更加有效.
+
+  你必须选择融合因子的方法包括但不限于
+  -  (Genetic Programming，GP) 
+  -  (Particle Swarm Optimization，PSO)
+  -  (Simulated Annealing，SA)
+  -  (Differential Evolution，DE)
+  -  (Ant Colony Optimization，ACO)
+  -  (Bee Algorithm，BA)
+  -  (Tabu Search，TS)
+  -  (Artificial Immune System，AIS)
+  -  (Shuffled Frog Leaping Algorithm，SFLA)
+  -  (Cultural Algorithm，CA)
+  -  (Co-Evolution)
+   
+  这个改进后的因子公式必须是{complexity}
+
+  请按照如下格式直接输出改进后的因子(不要输出除了格式内容外的任何东西)
+  在因子公式中, {factor_terms} 必须被写作 {factor_term_names}. 有且只有这些变量.
+  格式为
+  [
+  
+  {{
+    "Factor Name": "{batch_name}_"+'_'+'base on its Explanation, not too long'  # like D_CAPITALIZATION_ADJUSTED_RETURN, you have to replace D.
+    "Factor Formula": "The formula of the random factor"
+    "Explanation": "A very very simple explanation of its meaning and how it is improved"
+  }}
+  ,
+  #这里添加剩下因子,因子个数一共为{factor_num}
+
+  ]
+

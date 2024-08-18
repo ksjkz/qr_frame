@@ -1,0 +1,77 @@
+input_params1:
+  factor_terms:
+    - Closing Price
+    - Opening Price
+    - Highest Price
+    - Lowest Price
+    - Trading Volume
+    - Price-to-Book Ratio
+    - Market Capitalization
+    - Daily Return(todays close price - yesterday close price)
+
+  factor_term_names:
+    - ADJ_D_CLOSE
+    - ADJ_D_OPEN
+    - ADJ_D_HIGH
+    - ADJ_D_LOW
+    - YUAN_VOLUME
+    - PB_RATIO
+    - MCAP_IN_CIRCULATION
+    - ONE_DAY_RETURN_PREV
+
+input_params:
+  factor_terms:
+    - 当日开盘相对于前一日收盘涨跌幅
+    - 当日最高相对于前一日收盘涨跌幅
+    - 当日最低相对于前一日收盘涨跌幅
+    - 当日收盘相对于前一日收盘涨跌幅
+    - 当日成交量相对于前一日成交量涨跌幅
+    - 当日PB相对于前一天PB涨跌幅
+    - 对数市值
+    
+
+  factor_term_names:
+    - D_OPEN_CHANGE
+    - D_HIGH_CHANGE
+    - D_LOW_CHANGE
+    - D_CLOSE_CHANGE
+    - D_VOLUME_CHANGE
+    - D_PB_CHANGE
+    - LOG_MCAP
+    
+  
+operators:
+
+  - add X Y
+  - sub X Y
+  - mul X Y
+  - div X Y
+  - sqrt X
+  - log X
+  - abs X
+  - neg X
+  - inv X
+  - max X Y
+  - min X Y
+  - sin X
+  - cos X
+  - tan X
+  - sig X
+  - sign X
+  - ltp X Y
+  - gtp X Y
+  - ts_sum X N
+  - ts_prod X N
+  - ts_covariance X Y N
+  - ts_std X N
+  - ts_mean X N
+  - ts_timeweighted_mean X N "Calculate the rolling time-weighted mean of X over an N-period window"
+  - ts_rank X N "Calculate the rolling rank of X over an N-period window"
+  - ts_max X N
+  - ts_min X N
+  - ts_argmax X N
+  - ts_argmin_X_N
+  - ts_median_X_N
+  - ts_skew_X_N
+
+
