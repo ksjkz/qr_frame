@@ -72,7 +72,7 @@ class Backtesting:
                     添加到section_cul_df 的列中
     """
    
-    def __init__(self,df:pd.DataFrame,factor_name:str='',opt=(0,0,0),r_name:str=params['_return'],t_name:str=params['_time'],
+    def __init__(self,df:pd.DataFrame,factor_name:str='',opt=(0,0,0),r_name:str=params['_return'],t_name:str=params['_time'],if_return=False
                  ):
         self.df=df.dropna()
         self.r_name=r_name
@@ -135,8 +135,10 @@ class Backtesting:
           case(_,_,_):
                     pass
         logger.info(f'已完成backtest初始化,df的shape为{self.df.shape}')
+        if if_return:
+          return self.df
         
-    def section_cul(self,opt:tuple=(1,0,0)):
+    def section_cul(self,opt:tuple=(1,0,0),if_return=False):
         """
 
         opt:x,y,z:默认值,计算ic和rankic
@@ -203,8 +205,10 @@ class Backtesting:
         section_cul_df = pd.DataFrame(backtest_list)
         setattr(self, 'section_cul_df', section_cul_df)
         logger.info(f'已经成功进行section_cul,保存在属性section_cul_df里,计算选项opt为{opt}')
+        if if_return:
+            return section_cul_df
 
-    def get_basic_info(self):
+    def get_basic_info(self,if_return=False):
             """
             功能描述:
             计算section_cul_df的每一列的mean
@@ -228,8 +232,10 @@ class Backtesting:
             aa['close_time']=self.section_cul_df["time"].iloc[-1]
             setattr(self, 'time_cul_dict', aa)
             logger.info(f'已经成功进行time_cul,保存在属性time_cul_dict里')
+            if if_return:
+                return aa
 
-    def get_cum_info(self):
+    def get_cum_info(self,if_return=False):
           '''
           section_cul_df 列计算累加值
           
@@ -241,9 +247,11 @@ class Backtesting:
           for columns_name in columns_list:
                self.section_cul_df[f'{columns_name}_cum']=self.section_cul_df[columns_name].cumsum()
           logger.info(f'已经成功进行rolling_cul,累加列保存在属性section_cul_df里')
+          if if_return:
+              return self.section_cul_df
     
 
-    def get_autocorr(self,n:int=10):
+    def get_autocorr(self,n:int=10,if_return=False):
           if not hasattr(self, 'section_cul_df'):
                   self.section_cul()
           y1=self.section_cul_df['rank_ic'].to_list()
@@ -251,6 +259,8 @@ class Backtesting:
           autocorr = acf(y1, nlags=n)[1:]
           setattr(self, 'autocorr', autocorr)
           logger.info(f'已经成功进行acf计算,保存在属性autocorr里,为list,保存滞后1到{n}期的autocorr')
+          if if_return:
+              return autocorr
           
               
                   
