@@ -138,6 +138,7 @@ class Backtesting:
         
     def section_cul(self,opt:tuple=(1,0,0)):
         """
+
         opt:x,y,z:默认值,计算ic和rankic
         x:代表计算相关系数的时候加不加权 0代表不加权,除0以外代表加权
         y:0代表用流通市值加权,1代表用log流通市值加权
@@ -203,9 +204,13 @@ class Backtesting:
         setattr(self, 'section_cul_df', section_cul_df)
         logger.info(f'已经成功进行section_cul,保存在属性section_cul_df里,计算选项opt为{opt}')
 
-    def time_cul(self):
+    def get_basic_info(self):
             """
-            功能描述:计算section_cul_df的各种mean和rankic的icir.同时记录period即数据开始结束时间
+            功能描述:
+            计算section_cul_df的每一列的mean
+            rankic的icir.
+
+            同时记录period即数据开始结束时间
 
             """
             if not hasattr(self, 'section_cul_df'):
@@ -224,9 +229,9 @@ class Backtesting:
             setattr(self, 'time_cul_dict', aa)
             logger.info(f'已经成功进行time_cul,保存在属性time_cul_dict里')
 
-    def rolling_cul(self):
+    def get_cum_info(self):
           '''
-          ic 什么的累加
+          section_cul_df 列计算累加值
           
           '''
           if not hasattr(self, 'section_cul_df'):
@@ -236,6 +241,16 @@ class Backtesting:
           for columns_name in columns_list:
                self.section_cul_df[f'{columns_name}_cum']=self.section_cul_df[columns_name].cumsum()
           logger.info(f'已经成功进行rolling_cul,累加列保存在属性section_cul_df里')
+    
+
+    def get_autocorr(self,n:int=10):
+          if not hasattr(self, 'section_cul_df'):
+                  self.section_cul()
+          y1=self.section_cul_df['rank_ic'].to_list()
+          
+          autocorr = acf(y1, nlags=n)[1:]
+          setattr(self, 'autocorr', autocorr)
+          logger.info(f'已经成功进行acf计算,保存在属性autocorr里,为list,保存滞后1到{n}期的autocorr')
           
               
                   
