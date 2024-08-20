@@ -1,6 +1,6 @@
 import ast
 import math
-from typing import List, Dict
+from typing import List, Dict,Tuple
 import warnings
 import pandas as pd
 import numpy as np
@@ -237,9 +237,9 @@ def reconstruct_expression(preorder_expr:list)->str:
     return stack[0]
 
 
-def preorder2DFoder(preorder_expr:list)->list[str]:
+def preorder2DFoder(preorder_expr:list,std_opt=True)-> Tuple[List[str], int]:
     '''
-    通过前序表达式通过堆栈返回df命令
+    通过前序表达式通过堆栈返回df命令和命令步骤数(不算每步之后的标准化)
 
     E.g. 
     输入:['Mult', 'div', 'ts_std', 'sub', 'ADJ_D_HIGH', 'ADJ_D_LOW', 10, 'ts_mean', 'sub', 'ADJ_D_HIGH', 'ADJ_D_LOW', 10, 'sqrt', 'YUAN_VOLUME']
@@ -353,14 +353,18 @@ def preorder2DFoder(preorder_expr:list)->list[str]:
                     df_oders.append(f"df['step_{index}']=df['{args[0]}'].rolling(window={args[1]}).apply(lambda x: np.argmin(x),raw=True)")
                 case 'ts_skew':
                     df_oders.append(f"df['step_{index}']=df['{args[0]}'].rolling(window={args[1]}).skew()")
+
+            if std_opt:
+                df_oders.append(f"df['step_{index}'] = (df['step_{index}'] - df['step_{index}'].mean()) / df['step_{index}'].std()")
             expr = f"step_{index}"
             stack.append(expr)
+
         elif (token in columns_list) or isinstance(token, (int, float)):
             stack.append(str(token))
         else:
             print(f"Invalid token: {token}")
-            return False
-    return df_oders
+            return False,False
+    return df_oders,index
 
 
 def find_Max_Number_In_Formulate(input_str:str)->int:
@@ -438,14 +442,14 @@ def f_coding(input:dict,df:pd.DataFrame,drop_opt=True)-> str:
     print(f"要解析的公式为\n{input['Factor Formula']}")
     preorder_expr = expr_tree.get_preorder_expression()
     print('解析生成的前序表达式为\n{}'.format(preorder_expr))
-    df_orders=preorder2DFoder(preorder_expr)
+    df_orders,count=preorder2DFoder(preorder_expr)
     if  df_orders== False:
         print('----------------抽象语法树解析生成代码失败-------------')
         return False
     print('\n-------------每一步的代码已由抽象语法树解析生成---------------')
     for i in  df_orders:
         print(i)
-    step_num=len(df_orders)   #步骤数
+    step_num=count   #步骤数
     steps_list = [f'step_{i}' for i in range(1, step_num + 1)] #[step_1, step_2,....]
 
 
