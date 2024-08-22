@@ -441,7 +441,7 @@ def compute_time_series_length(node, cumulative_length=0,print_opt=False, column
 
 
 
-def f_coding(input:dict|str,df:pd.DataFrame,drop_opt=True,std_opt=False,zero_opt=True,columns_list:list=[],group_info=(0,'Ticker'))-> str:
+def f_coding(input:dict|str,df:pd.DataFrame,drop_opt=True,std_opt=False,zero_opt=True,columns_list:list=[],group_info=(0,'Ticker'))-> str|bool:
     '''
     输入dict形如:
     "Factor Name": "AA_2_price_volatility_and_trading_activity",
