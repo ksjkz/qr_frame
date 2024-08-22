@@ -1,3 +1,9 @@
+'''
+author: KSJKZ QINTIAN
+git@github.com:ksjkz/qr_frame.git
+'''
+
+
 import ast
 import math
 from typing import List, Dict,Tuple
@@ -5,6 +11,7 @@ import warnings
 import pandas as pd
 import numpy as np
 import re
+import numbers
 from tqdm import tqdm
 '''
 ast 抽象语法树
@@ -87,8 +94,9 @@ class Node:
 
 
 class ExpressionTree:
-    def __init__(self, expression):
+    def __init__(self, expression,columns_list):
         self.expression = expression
+        self.columns_list=columns_list
         self.root = self._parse_expression(expression)
 
     def _parse_expression(self, expression):
@@ -141,11 +149,18 @@ class ExpressionTree:
         '''
         return self._preorder_traversal(self.root)
     
-    def get_time_series_lenth(self):
+    def get_reconstruct_expression(self):
+        '''
+        由前序表达式获取重构的公式
+        '''
+        return reconstruct_expression(self.get_preorder_expression())
+
+    
+    def get_time_series_lenth(self,print_opt=False):
         '''
         获取时间序列长度
         '''
-        return compute_time_series_length(self.root)
+        return compute_time_series_length(self.root,print_opt=print_opt,columnss_list=self.columns_list)
     
 '''
 # 示例表达式
@@ -215,7 +230,7 @@ arity = {
 
 
 columns_list=['D_OPEN_CHANGE', 'D_HIGH_CHANGE', 'D_LOW_CHANGE', 'D_CLOSE_CHANGE','D_VOLUME_CHANGE', 'D_PB_CHANGE', 'LOG_MCAP', 'CLASS_NAME', 'TICKER',
-       'T_DATE', 'ONE_DAY_RETURN','ADJ_D_OPEN', 'ADJ_D_HIGH', 'ADJ_D_LOW', 'ADJ_D_CLOSE','MCAP_IN_CIRCULATION', 'YUAN_VOLUME', 'PB_RATIO', 'ONE_DAY_RETURN_PREV']
+       'T_DATE', 'ONE_DAY_RETURN','ADJ_D_OPEN', 'ADJ_D_HIGH', 'ADJ_D_LOW', 'ADJ_D_CLOSE','MCAP_IN_CIRCULATION', 'YUAN_VOLUME', 'PB_RATIO', 'ONE_DAY_RETURN_PREV',] #这个是默认的columns_list,如果column不是这些,可将参数传入
 
 def reconstruct_expression(preorder_expr:list)->str:
     '''
@@ -237,9 +252,13 @@ def reconstruct_expression(preorder_expr:list)->str:
     return stack[0]
 
 
-def preorder2DFoder(preorder_expr:list,std_opt=True)-> Tuple[List[str], int]:
+def preorder2DFoder(preorder_expr:list,std_opt=True,zero_opt=True,columns_list:list=columns_list)-> Tuple[List[str], int]:
     '''
     通过前序表达式通过堆栈返回df命令和命令步骤数(不算每步之后的标准化)
+    std_opt:是否每一步计算后标准化
+    zero_opt:是否将零值处理为0,0001,方便除法
+    columns_list:公式中出现的列名
+   
 
     E.g. 
     输入:['Mult', 'div', 'ts_std', 'sub', 'ADJ_D_HIGH', 'ADJ_D_LOW', 10, 'ts_mean', 'sub', 'ADJ_D_HIGH', 'ADJ_D_LOW', 10, 'sqrt', 'YUAN_VOLUME']
@@ -356,10 +375,13 @@ def preorder2DFoder(preorder_expr:list,std_opt=True)-> Tuple[List[str], int]:
 
             if std_opt:
                 df_oders.append(f"df['step_{index}'] = (df['step_{index}'] - df['step_{index}'].mean()) / df['step_{index}'].std()")
+            if zero_opt:
+                df_oders.append(f"df['step_{index}'] = df['step_{index}'].apply(lambda x: x if abs(x) > 0.0001 else 0.0001)")
+
             expr = f"step_{index}"
             stack.append(expr)
 
-        elif (token in columns_list) or isinstance(token, (int, float)):
+        elif (token in columns_list) or isinstance(token, numbers.Number):
             stack.append(str(token))
         else:
             print(f"Invalid token: {token}")
@@ -377,13 +399,14 @@ def find_Max_Number_In_Formulate(input_str:str)->int:
           return max_number
 
 
-def compute_time_series_length(node, cumulative_length=0,print_opt=False):
+def compute_time_series_length(node, cumulative_length=0,print_opt=False, columnss_list:list=columns_list):
     """
-    返回值 公式时序长度
-    df前多少列为naN
+    输入 node
+    返回值 公式时序长度-1
+    即dfgroupby后前多少列为naN
    
     """
-    if re.match(r"^ts_", node.value):#处理时序操作符
+    if isinstance(node.value, (str, bytes)) and re.match(r"^ts_", node.value):#处理时序操作符
         if print_opt:
             print(node.value)
        
@@ -395,15 +418,11 @@ def compute_time_series_length(node, cumulative_length=0,print_opt=False):
                    print(ts_length)
                pass
             else:
-                pre_length=compute_time_series_length(i, cumulative_length)
+                pre_length=compute_time_series_length(i, cumulative_length, print_opt=print_opt, columnss_list=columnss_list)
                 lenth_list.append(pre_length)
-     
-
         return  max(lenth_list)+ ts_length-1
-    
-    
     # 处理末端节点(列名orconstant)
-    elif node.value in columns_list or isinstance(node.value, int):
+    elif (node.value in columnss_list) or isinstance(node.value, numbers.Number):
         if print_opt:
             print(node.value)
         # 无时序影响，返回当前的累计长度
@@ -415,34 +434,75 @@ def compute_time_series_length(node, cumulative_length=0,print_opt=False):
         lenth_list=[]
         # 递归计算左右子节点的时序长度，并取最大值
         for i in node.children:
-           ts_length = compute_time_series_length(i, cumulative_length)
+           ts_length = compute_time_series_length(i, cumulative_length, print_opt=print_opt, columnss_list=columnss_list)
            lenth_list.append(ts_length)
         return max(lenth_list)
     
 
 
 
-def f_coding(input:dict,df:pd.DataFrame,drop_opt=True)-> str:
+def f_coding(input:dict|str,df:pd.DataFrame,drop_opt=True,std_opt=False,zero_opt=True,columns_list:list=[],group_info=(0,'Ticker'))-> str:
     '''
     输入dict形如:
     "Factor Name": "AA_2_price_volatility_and_trading_activity",
     "Factor Formula": "div(ts_std(sub(ADJ_D_HIGH, ADJ_D_LOW), 10), ts_timeweighted_mean(ADJ_D_CLOSE, 10)) * sqrt(YUAN_VOLUME) + div(ts_max(ADJ_D_HIGH, 10), ts_min(ADJ_D_LOW, 10)) * log(YUAN_VOLUME)"
 
+    输入str 即公式本身 建议输入上面格式的dict
+
     输出
     dict的Factor Name 同时也是计算完成df的列名
-     
-    drop_opt是否要删除中间计算步骤的df列(step1...不包含最后的因子列)
+    如果返回False说明有错误(这个函数不会raise)
 
+    参数
+    drop_opt是否要删除中间计算步骤的df列(step1...不包含最后的因子列)
+    std_opt是否要标准化
+    zero_opt是否要处理0值 max(接近于0,0.0001)
+    columns_list: 需要被识别的列名,如果不传入会自动获取df的列名
+    group_info: (is_group 1为要group,如果要group,groupby的列名值)
     '''
-    expr_tree = ExpressionTree(input['Factor Formula'])
+  
+    match input:
+        case dict():
+            print("输入是一个字典 (dict)")
+            try:
+                input1 = input['Factor Formula']
+                name_new = input['Factor Name']
+            except KeyError as e:
+                print(f"--------字典中缺少必要的键: {e}--------")
+                return False
+        
+        case str():
+            print("输入是一个字符串 (str)")
+            input1 = input
+            name_new = 'factor'
+        
+        case _:
+            print('----------输入类型错误,必须是str或者dict,dict列名为"Factor Name""Factor Formula"--------')
+
+            return False
+        
+    if columns_list==[]:
+        columns_list=df.columns.to_list()
+    
+    print(f"df包含的列有{columns_list}")
+   
+    expr_tree = ExpressionTree(expression=input1, columns_list=columns_list)
     if expr_tree==False:
         print('----------------表达式(公式)不符合抽象语法树规范-------------')
         return False
+    
+    
 
-    print(f"要解析的公式为\n{input['Factor Formula']}")
+    print(f"要解析的公式为\n{input1}")
     preorder_expr = expr_tree.get_preorder_expression()
     print('解析生成的前序表达式为\n{}'.format(preorder_expr))
-    df_orders,count=preorder2DFoder(preorder_expr)
+
+    num_list=[item for item in preorder_expr if not isinstance(item, str)]
+    for num in num_list:
+        df[str(num)] = num
+        print(f"生成df['{num}'] = {num} 列(为了处理非列名常数项,有可能这一列不参与计算)")
+    
+    df_orders,count=preorder2DFoder(preorder_expr,std_opt=std_opt,zero_opt=zero_opt,columns_list=columns_list)
     if  df_orders== False:
         print('----------------抽象语法树解析生成代码失败-------------')
         return False
@@ -470,22 +530,30 @@ def f_coding(input:dict,df:pd.DataFrame,drop_opt=True)-> str:
     print('\n------------------全部计算步骤已经完成------------')
     if drop_opt:
         df.drop(columns=drop_column_list[:-1],inplace=True)
+        df.drop(columns=[str(item) for item in num_list],inplace=True)
 
     print('\n--------------计算中出现的中间列已经delete------------')
     
-    name_new=input['Factor Name']
+    
     name_old=drop_column_list[-1]
 
     df.rename(columns={name_old: name_new}, inplace=True)
-    print(f'\n----df的最后一列重新命名为{name_new}-----------')
+    print(f'\n---------------df生成新的一列并重新命名为{name_new}-----------')
 
+    if group_info[0]==1:
+        mm=expr_tree.get_time_series_lenth()
+        print(f'------------------公式的时间序列长度为{mm}------------------')
+        if mm !=0:
+             indices = df.groupby(group_info[1]).apply(lambda x: x.head(mm).index).explode().values
+             df.loc[indices,name_new]=None
+             print(f'----------已经将每个公式的前{mm}个值设为空值--------')
 
-    mm=expr_tree.get_time_series_lenth()
-    if mm !=0:
-       indices = df.groupby('TICKER').apply(lambda x: x.head(mm).index).explode().values
-       df.loc[indices,name_new]=None
+    print('\n#########################因子值计算完成#################################')
 
     
     return name_new
+
+
+
 
 
