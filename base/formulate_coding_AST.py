@@ -1,5 +1,5 @@
 '''
-author: KSJKZ QINTIAN
+KSJKZ 
 git@github.com:ksjkz/qr_frame.git
 '''
 
@@ -459,6 +459,8 @@ def f_coding(input:dict|str,df:pd.DataFrame,drop_opt=True,std_opt=False,zero_opt
     zero_opt是否要处理0值 max(接近于0,0.0001)
     columns_list: 需要被识别的列名,如果不传入会自动获取df的列名
     group_info: (is_group 1为要group,如果要group,groupby的列名值)
+
+    注意预处理阶段就要把每个group交界的地方给扣掉
     '''
   
     match input:
