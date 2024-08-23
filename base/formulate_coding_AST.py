@@ -546,7 +546,7 @@ def f_coding(input:dict|str,df:pd.DataFrame,drop_opt=True,std_opt=False,zero_opt
         if mm !=0:
              indices = df.groupby(group_info[1]).apply(lambda x: x.head(mm).index).explode().values
              df.loc[indices,name_new]=None
-             print(f'----------已经将每个公式的前{mm}个值设为空值--------')
+             print(f'----------已经将每个{group_info[1]}的前{mm}个值设为空值--------')
 
     print('\n#########################因子值计算完成#################################')
 
