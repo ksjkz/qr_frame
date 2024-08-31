@@ -7,3 +7,7 @@
 /working_bench_doc/
 /main11.ipynb
 /main2.ipynb
+/config/tushare_api.yaml
+/config/binance_api.yaml
+/*.ipynb
+/d2.csv
