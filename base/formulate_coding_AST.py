@@ -418,7 +418,10 @@ def find_Max_Number_In_Formulate(input_str:str)->int:
           numbers = [int(num) for num in numbers]
           max_number = max(numbers) if numbers else int(0)
           return max_number
-
+'''
+written by KSJKZ (QT)
+git@github.com:ksjkz/qr_frame.git
+'''
 
 def compute_time_series_length(node, cumulative_length=0,print_opt=False, columnss_list:list=columns_list):
     """
@@ -481,7 +484,7 @@ def f_coding(input:dict|str,df:pd.DataFrame,drop_opt=True,std_opt=False,zero_opt
     columns_list: 需要被识别的列名,如果不传入会自动获取df的列名
     group_info: (is_group 1为要group,如果要group,groupby的列名值)
 
-    注意预处理阶段就要把每个group交界的地方给扣掉
+    如果group_info为(1,'ticker')最后会把每个ticker交界的地方前n行计算出的值设置为0
     '''
   
     match input:
