@@ -1,6 +1,27 @@
 '''
-KSJKZ 
+written by KSJKZ (QT)
 git@github.com:ksjkz/qr_frame.git
+'''
+'''
+数据集要求注释:
+时序操作通过大量pd.rolling来实现. rolling是本行以及向上的n行.因此,数据集请处理为
+pd.dataframe
+
+ticker1   20231231
+ticker1   20240101
+ticker1   20240102
+          ....
+
+ticker2   20231231
+ticker2   20240101
+ticker2   20240102
+          ....
+的形式
+
+如果只有一只ticker(或者其他类似ticker的东西)
+则只需要设置时间为由早到晚
+
+
 '''
 
 
