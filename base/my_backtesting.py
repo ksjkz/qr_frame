@@ -33,27 +33,20 @@ from wcorr import WeightedCorr
 from statsmodels.tsa.stattools import acf
 
 
-params = {
-    '_time': 'T_DATE',
-    '_ticker': 'TICKER',
-    '_class_name': 'CLASS_NAME',
-    '_return': 'ONE_DAY_RETURN',  
-    '_mcap_in_circulation': 'MCAP_IN_CIRCULATION',
-    '_log_mcap_in_circulation':'LOG_MCAP'
-}
 
 class Backtesting:
     """
         类名：Backtesting
+        单因子/模型回测框架
 ------------------输入参数
                         ---df 包含所有信息的完整的df(注意初始化的时候会自动将df进行dropna)
                         ---factor_name 因子名称 为df的某一列的列名
                         ---r_name:匹配return的列名
                         ---t_name:匹配time的列名(日期,月之类的)
-                        ---opt (0,_,_) 四分法去极值加标准化
-                               (_,0,_) 仅去极值
-                               (_,1,_) 仅标准化
-                               (_,_,_) 不做任何处理
+                        ---opt 0 四分法去极值加标准化
+                               1 仅去极值
+                               2 仅标准化
+                               其他 不做任何处理
 
                         
                         通过__init__相当于得到数据清洗以后的df    
@@ -72,8 +65,12 @@ class Backtesting:
                     添加到section_cul_df 的列中
     """
    
-    def __init__(self,df:pd.DataFrame,factor_name:str='',opt=(0,0,0),r_name:str=params['_return'],t_name:str=params['_time'],if_return=False
+    def __init__(self,df:pd.DataFrame,factor_name:str='',opt:int=0,r_name:str='',t_name:str='',
                  ):
+        if not t_name  not in df.columns:
+                   raise ValueError(f"t_name '{t_name}' is either empty or not found in DataFrame columns.")
+        if not r_name  not in df.columns:
+                   raise ValueError(f"r_name '{r_name}' is either empty or not found in DataFrame columns.")
         self.df=df.dropna()
         self.r_name=r_name
         self.t_name=t_name
@@ -84,7 +81,7 @@ class Backtesting:
         
 
         match opt:
-          case (0,_,_):
+          case 0:
                 lenth1=self.df.shape[0]
                 for _,group in tqdm(self.df.groupby(t_name),leave=False,desc='正在清洗df'):
                                 
@@ -106,9 +103,9 @@ class Backtesting:
 
                 self.df=self.df.dropna()
                 lenth2=self.df.shape[0]
-                logger.info(f'已经将{self.factor_name}和{r_name}标准化并按四分法去极值,去极值前有{lenth1}条数据，去极值后有{lenth2}条数据')
+                logger.info(f'已经dropna并将{self.factor_name}和{r_name}标准化并按四分法去极值,去极值前有{lenth1}条数据，去极值后有{lenth2}条数据')
                 
-          case (_,0,_):
+          case 1:
              lenth1=self.df.shape[0]
              for _,group in tqdm(self.df.groupby(t_name),leave=False,desc='正在清洗df'):
                  Q1 = group[self.factor_name].quantile(0.25)
@@ -120,9 +117,9 @@ class Backtesting:
 
              self.df=self.df.dropna()
              lenth2=self.df.shape[0]
-             logger.info(f'已经按四分法去极值,去极值前有{lenth1}条数据，去极值后有{lenth2}条数据')
+             logger.info(f'已经dropna并按四分法去极值,去极值前有{lenth1}条数据，去极值后有{lenth2}条数据')
 
-          case(_,1,_):
+          case 2:
             for _,group in tqdm(self.df.groupby(t_name),leave=False,desc='正在清洗df'):
                 a=group[self.factor_name].mean()
                 b=group[self.factor_name].std()
@@ -130,27 +127,24 @@ class Backtesting:
                 b1=group[r_name].std()
                 self.df.loc[group.index, self.factor_name] =group[self.factor_name].apply(lambda x: (x - a) / b)
                 self.df.loc[group.index, r_name]=group[r_name].apply(lambda x: (x - a1) / b1)
-            logger.info(f'已经将{self.factor_name}和{r_name}标准化')
+            logger.info(f'已经dropna并将{self.factor_name}和{r_name}标准化')
         
-          case(_,_,_):
+          case _:
+                    logger.info(f'仅仅dropna,没做任何处理')
                     pass
         logger.info(f'已完成backtest初始化,df的shape为{self.df.shape}')
-        if if_return:
-          return self.df
+        return self.df
         
-    def section_cul(self,opt:tuple=(1,0,0),if_return=False):
+    def section_cul(self,opt:tuple=(1,0)):
         """
-
         opt:x,y,z:默认值,计算ic和rankic
         x:代表计算相关系数的时候加不加权 0代表不加权,除0以外代表加权
-        y:0代表用流通市值加权,1代表用log流通市值加权
-        z:在y!=0或1的基础上,z为加权列的列名,类型为 str
-    
+        y:在x!=0的基础上,z为加权列的列名,类型为 str
         """
         grouped_df=self.df.groupby(self.t_name)
         backtest_list=[]    
         match opt:
-            case (0,_,_):
+            case (0,_):
                 for name,group in tqdm(grouped_df,leave=True,desc='正在回测,不加权'):
                          rank_ic, p_rank_ic = spearmanr(group[self.factor_name],group[self.r_name])
                          ic, p_ic = pearsonr(group[self.factor_name],group[self.r_name])
@@ -161,35 +155,7 @@ class Backtesting:
                          i['p_rank_ic']=p_rank_ic
                          i['p_ic']=p_ic
                          backtest_list.append(i)
-
-            case (_,0,_):
-                weight=params['_mcap_in_circulation']
-                if not(weight in self.df.columns):
-                        raise ValueError(f'{weight} NOT in self.df.columns')
-                weight=params['_mcap_in_circulation']
-                for name,group in tqdm(grouped_df,leave=True,desc='正在回测,按流通市值加权'):
-                           WC = WeightedCorr(xyw=group[[self.factor_name,self.r_name,weight]])
-                           ic=WC(method="pearson")
-                           rho=WC( method="spearman")
-                           i={}
-                           i['time']=name
-                           i['ic']=ic
-                           i['rank_ic']=rho
-                           backtest_list.append(i)
-            case (_,1,_):
-                weight=params['_log_mcap_in_circulation']
-                if not(weight in self.df.columns):
-                        raise ValueError(f'{weight} NOT in self.df.columns')
-                for name,group in tqdm(grouped_df,leave=True,desc='正在回测,按log流通市值加权'):
-                           WC = WeightedCorr(xyw=group[[self.factor_name,self.r_name,weight]])
-                           ic=WC(method="pearson")
-                           rho=WC( method="spearman")
-                           i={}
-                           i['time']=name
-                           i['ic']=ic
-                           i['rank_ic']=rho
-                           backtest_list.append(i)
-            case (_,_,z):
+            case (_,z):
                     if not(z in self.df.columns):
                         raise ValueError(f'{z} NOT in self.df.columns')
                     for name,group in tqdm(grouped_df,leave=True,desc=f'正在回测,按{z}加权'):
@@ -205,17 +171,14 @@ class Backtesting:
         section_cul_df = pd.DataFrame(backtest_list)
         setattr(self, 'section_cul_df', section_cul_df)
         logger.info(f'已经成功进行section_cul,保存在属性section_cul_df里,计算选项opt为{opt}')
-        if if_return:
-            return section_cul_df
+        return section_cul_df
 
-    def get_basic_info(self,if_return=False):
+    def get_basic_info(self,):
             """
             功能描述:
             计算section_cul_df的每一列的mean
             rankic的icir.
-
             同时记录period即数据开始结束时间
-
             """
             if not hasattr(self, 'section_cul_df'):
                   self.section_cul()
@@ -232,13 +195,11 @@ class Backtesting:
             aa['close_time']=self.section_cul_df["time"].iloc[-1]
             setattr(self, 'time_cul_dict', aa)
             logger.info(f'已经成功进行time_cul,保存在属性time_cul_dict里')
-            if if_return:
-                return aa
+            return aa
 
-    def get_cum_info(self,if_return=False):
+    def get_cum_info(self,):
           '''
           section_cul_df 列计算累加值
-          
           '''
           if not hasattr(self, 'section_cul_df'):
                   self.section_cul()
@@ -247,11 +208,18 @@ class Backtesting:
           for columns_name in columns_list:
                self.section_cul_df[f'{columns_name}_cum']=self.section_cul_df[columns_name].cumsum()
           logger.info(f'已经成功进行rolling_cul,累加列保存在属性section_cul_df里')
-          if if_return:
-              return self.section_cul_df
-    
-
-    def get_autocorr(self,n:int=10,if_return=False):
+          return self.section_cul_df
+    def run(self,get_basic_info_opt:tuple=(1,0),if_get_autocorr=False,autocorr_n:int=10):
+        '''
+        汇总执行其他方法
+        '''
+        self.get_basic_info(opt=get_basic_info_opt)
+        self.get_cum_info()
+        if if_get_autocorr:
+           self.get_autocorr(autocorr_n)
+        self.get_cum_info()
+        
+    def get_autocorr(self,n:int=10,):
           if not hasattr(self, 'section_cul_df'):
                   self.section_cul()
           y1=self.section_cul_df['rank_ic'].to_list()
@@ -259,14 +227,13 @@ class Backtesting:
           autocorr = acf(y1, nlags=n)[1:]
           setattr(self, 'autocorr', autocorr)
           logger.info(f'已经成功进行acf计算,保存在属性autocorr里,为list,保存滞后1到{n}期的autocorr')
-          if if_return:
-              return autocorr
+          return autocorr
           
               
                   
 
 
-def decile_return(df: pd.DataFrame, by: str='', n: int = 10,opt:tuple =(1,0,0,0),t_name:str=params['_time'],r_name:str=params['_return']) -> pd.DataFrame|list[dict]:
+def get_decile_return(df: pd.DataFrame, by: str='', n: int = 10,w_opt:tuple =(0,0),r_opt:int=0,t_name:str='',r_name:str='') -> pd.DataFrame|list[dict]:
          """
         功能描述:
          按截面按因子值分为n组，计算每组加权收益率
@@ -285,12 +252,15 @@ def decile_return(df: pd.DataFrame, by: str='', n: int = 10,opt:tuple =(1,0,0,0)
              函数返回值的描述包含的key:  time	decile	weighted_return
          
          """
-         if by=='':
-             raise ValueError('by参数不能为空')
+         if not t_name not in df.columns:
+                   raise ValueError(f"t_name '{t_name}' is either empty or not found in DataFrame columns.")
+         if not r_name not in df.columns:
+                   raise ValueError(f"r_name '{r_name}' is either empty or not found in DataFrame columns.")
+         if by not in df.columns:
+                   raise ValueError(f"by '{by}' is either empty or not found in DataFrame columns.")
+         
 
          results=[]
-         w_opt=opt[:-1]
-         r_opt=opt[-1]
          for name,group in tqdm(df.groupby(t_name),desc='正在分组回测计算decile_return'):
              group = group.sort_values(by=by)
              group['decile'] = pd.qcut(group[by], n, labels=False,duplicates='drop')
@@ -299,28 +269,22 @@ def decile_return(df: pd.DataFrame, by: str='', n: int = 10,opt:tuple =(1,0,0,0)
                           decile_group = group[group['decile'] == decile]
                           if decile_group.empty:#如果分组不存在,将weighted_return置0,避免报错
                                  results.append({'time': name, 'decile': decile, 'weighted_return': 0})
+                                 print(f'第{name} 分组{decile}不存在')
                                  continue
                           match w_opt:
-                                 case (0,_,_):
+                                 case (0,_):
                                          weighted_return=decile_group[r_name].mean()
                                          desc='不加权'
-                                 case (_,0,_):
-                                     weighted_return = np.average(decile_group[r_name], weights=decile_group[params['_mcap_in_circulation']])
-                                     desc='按市值加权'
-                                 case (_,1,_):
-                                        weighted_return = np.average(decile_group[r_name], weights=decile_group[params['_log_mcap_in_circulation']])
-                                        desc='log市值加权'
-                                 case (_,_,z):
+                                 
+                                 case (_,z):
                                         if not(z in df.columns):
                                                    raise ValueError(f'{z} NOT in self.df.columns')
-                                        
+                            
                                         weighted_return = np.average(decile_group[r_name], weights=decile_group[z])
                                         desc=f'按{z}加权'
 
-                                 
-                          results.append({'time': name, 'decile': decile, 'weighted_return': weighted_return})
+                          results.append({'time': name, 'decile': decile, 'average_return': weighted_return})
 
-        
          match r_opt:
                 case 0:
                        result_df = pd.DataFrame(results)
@@ -332,4 +296,37 @@ def decile_return(df: pd.DataFrame, by: str='', n: int = 10,opt:tuple =(1,0,0,0)
                
                 case _:
                        raise ValueError('r_opt参数只能为0或1')
+                
+
+class Decile:
+    """
+    分组计算每组收益率
+    """
+    def __init__(self,df: pd.DataFrame, by: str='', n:int = 10,w_opt:tuple =(0,0),t_name:str='',r_name:str='') -> pd.DataFrame:
+        self.df=get_decile_return(df=df, by=by, n=n,w_opt=w_opt,r_opt=0,t_name=t_name,r_name=r_name)
+        self.df['time'] = pd.to_datetime(self.df['time'])
+    def get_mean(self):
+        setattr(self, 'mean_df', self.df.groupby('decile')['average_return'].mean())
+        return self.mean_df
+    def get_std(self):
+        setattr(self, 'std_df', self.df.groupby('decile')['average_return'].std())
+        return self.std_df
+    def get_cumprod(self):
+        for _,group in self.df.groupby('decile'):
+                  group['weighted_return']=group['average_return']+1
+                  self.df.loc[group.index,'average_return_cumprod']=group['weighted_return'].cumprod()
+        return self.df
+    def get_cumsum(self):
+        for _,group in self.df.groupby('decile'):
+                  self.df.loc[group.index,'average_return_cumsum']=group['weighted_return'].cumsum()
+        return self.df
+    def run(self,opt):
+           self.get_mean()
+           self.get_cumprod()
+           return self.df,self.mean_df
+    
+
+
+    
+    
                        
