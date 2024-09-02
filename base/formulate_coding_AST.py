@@ -21,10 +21,9 @@ ticker2   20240102
 如果只有一只ticker(或者其他类似ticker的东西)
 则只需要设置时间为由早到晚
 
+如果有多只ticker(或者其他类似ticker的东西),请调用load_df函数
 
 '''
-
-
 import ast
 import math
 from typing import List, Dict,Tuple
@@ -34,6 +33,25 @@ import numpy as np
 import re
 import numbers
 from tqdm import tqdm
+def load_df(df:pd.DataFrame, groupby_column:str='ticker', sort_column:str='t_date'):
+    """
+    按指定列对 DataFrame 进行分组，并对每个组内的数据按指定列进行排序。
+    参数:
+    - df: pandas DataFrame, 输入的数据框
+    - groupby_column: str, 用于分组的列名
+    - sort_column: str, 用于排序的列名
+    返回:
+    - pandas DataFrame, 按组排序后的数据框
+    """
+    # 将排序列转换为日期时间类型（如果适用）
+    if pd.api.types.is_datetime64_any_dtype(df[sort_column]) == False:
+        df[sort_column] = pd.to_datetime(df[sort_column])
+    # 按 groupby_column 列分组，并在每个组内按 sort_column 列排序
+    sorted_df = df.groupby(groupby_column, group_keys=False).apply(lambda x: x.sort_values(sort_column))
+    return sorted_df
+
+
+
 '''
 ast 抽象语法树
 python中的ast模块提供了方法,用于解析操作 python源代码(形式)的str变成抽象语法树
@@ -232,9 +250,12 @@ arity = {
     'gtp': 2,
 
     # Time Series Operators
+    #ts函数 第一个为列,第二个为period 如 ts_sum(ADJ_D_CLOSE, 10)
+    
+    'ts_pct_change': 2,  #计算涨跌幅,pd.pct_change 遇到缺失值不填充,
     'ts_sum': 2,
     'ts_prod': 2,
-    'ts_covariance': 3,
+    'ts_covariance': 3,    #ts_covariance(ADJ_D_CLOSE,ADJ_D_OPEN, 10)
     'ts_corr':3,
 
     'ts_std': 2,
@@ -247,6 +268,8 @@ arity = {
     'ts_argmax': 2,
     'ts_argmin': 2,
     'ts_skew': 2, #计算偏度
+    'ts_kurt': 2, #计算峰度
+    
 }
 
 
@@ -365,6 +388,9 @@ def preorder2DFoder(preorder_expr:list,std_opt=True,zero_opt=True,columns_list:l
                     df_oders.append(f"df['step_{index}']=df.apply(lambda row: 1 if row['{args[0]}'] > row['{args[1]}'] else 0, axis=1)")
                 case 'gtp':
                     df_oders.append(f"df['step_{index}']=df.apply(lambda row: 1 if row['{args[0]}'] < row['{args[1]}'] else 0, axis=1)")
+
+                case 'ts_pct_change':
+                    df_oders.append(f"df['step_{index}']=df['{args[0]}'].pct_change(periods={args[1]})")
                 case 'ts_sum':
                     df_oders.append(f"df['step_{index}']=df['{args[0]}'].rolling(window={args[1]}).sum()")
                 case 'ts_prod':
@@ -393,11 +419,13 @@ def preorder2DFoder(preorder_expr:list,std_opt=True,zero_opt=True,columns_list:l
                     df_oders.append(f"df['step_{index}']=df['{args[0]}'].rolling(window={args[1]}).apply(lambda x: np.argmin(x),raw=True)")
                 case 'ts_skew':
                     df_oders.append(f"df['step_{index}']=df['{args[0]}'].rolling(window={args[1]}).skew()")
+                case 'ts_kurt':
+                    df_oders.append(f"df['step_{index}']=df['{args[0]}'].rolling(window={args[1]}).kurt()")
 
             if std_opt:
                 df_oders.append(f"df['step_{index}'] = (df['step_{index}'] - df['step_{index}'].mean()) / df['step_{index}'].std()")
             if zero_opt:
-                df_oders.append(f"df['step_{index}'] = df['step_{index}'].apply(lambda x: x if abs(x) > 0.0001 else 0.0001)")
+                df_oders.append(f"df['step_{index}'] = df['step_{index}'].apply(lambda x: x if abs(x) > 0.00001 else 0.00001)")
 
             expr = f"step_{index}"
             stack.append(expr)
@@ -524,6 +552,7 @@ def f_coding(input:dict|str,df:pd.DataFrame,drop_opt=True,std_opt=False,zero_opt
     print('解析生成的前序表达式为\n{}'.format(preorder_expr))
 
     num_list=[item for item in preorder_expr if not isinstance(item, str)]
+    num_list=list(set(num_list)) #去重,减少内存占用
     for num in num_list:
         df[str(num)] = num
         print(f"生成df['{num}'] = {num} 列(为了处理非列名常数项,有可能这一列不参与计算)")

@@ -31,9 +31,13 @@ from scipy.stats import rankdata
 from wcorr import WeightedCorr
 from statsmodels.tsa.stattools import acf
 
-def group_std(df:pd.DataFrame,columns_list:list,by:str='T_DATE',):
+
+def group_std(df:pd.DataFrame,columns_list:list,by:str='t_date',):
    '''
    对columns_list列进行group后再标准化
+   输入 df
+   columns_list:[str] str为列名
+   by: 分组列名
    '''
    def standardize_group(group):
     scaler = StandardScaler()
@@ -41,3 +45,20 @@ def group_std(df:pd.DataFrame,columns_list:list,by:str='T_DATE',):
     return group
    d3 = df.groupby(by).apply(standardize_group)
    return d3
+
+from base.formulate_filter_AST import load_df
+
+def set_return(df:pd.DataFrame,time_column:str='t_date',ticker_column:str='ticker',close_column:str='close',return_column:str='one_day_return'):
+  '''
+  为df添加一列return
+  因为要通过load_df,所以输入无需排序
+  '''
+  df=load_df(df,groupby_column=ticker_column,sort_column=time_column)
+  df[return_column]=df[close_column].pct_change(-1)
+  indices = df.groupby(ticker_column).apply(lambda x: x.tail(1).index).explode().values
+  df.loc[indices,return_column]=None
+  return df
+
+
+
+
