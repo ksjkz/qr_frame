@@ -296,7 +296,7 @@ def reconstruct_expression(preorder_expr:list)->str:
     return stack[0]
 
 
-def preorder2DFoder(preorder_expr:list,std_opt=True,zero_opt=True,columns_list:list=columns_list)-> Tuple[List[str], int]:
+def preorder2DFoder(preorder_expr:list,columns_list:list=columns_list)-> Tuple[List[str], int]:
     '''
     通过前序表达式通过堆栈返回df命令和命令步骤数(不算每步之后的标准化)
     std_opt:是否每一步计算后标准化
@@ -351,11 +351,11 @@ def preorder2DFoder(preorder_expr:list,std_opt=True,zero_opt=True,columns_list:l
 
 
                 case 'div':
-                    df_oders.append(f"df['step_{index}']=np.where(df['{args[1]}'] != 0, df['{args[0]}'] / df['{args[1]}'], np.nan)")
+                    df_oders.append(f"df['step_{index}']=np.where(df['{args[1]}'] != 0, df['{args[0]}'] / df['{args[1]}'], df['{args[0]}']/0.0001)")
                 case '/':
-                    df_oders.append(f"df['step_{index}']=np.where(df['{args[1]}'] != 0, df['{args[0]}'] / df['{args[1]}'], np.nan)")
+                    df_oders.append(f"df['step_{index}']=np.where(df['{args[1]}'] != 0, df['{args[0]}'] / df['{args[1]}'], df['{args[0]}']/0.0001)")
                 case 'Div':
-                    df_oders.append(f"df['step_{index}']=np.where(df['{args[1]}'] != 0, df['{args[0]}'] / df['{args[1]}'], np.nan)")
+                    df_oders.append(f"df['step_{index}']=np.where(df['{args[1]}'] != 0, df['{args[0]}'] / df['{args[1]}'], df['{args[0]}']/0.0001)")
 
 
                 case 'sqrt':
@@ -422,10 +422,8 @@ def preorder2DFoder(preorder_expr:list,std_opt=True,zero_opt=True,columns_list:l
                 case 'ts_kurt':
                     df_oders.append(f"df['step_{index}']=df['{args[0]}'].rolling(window={args[1]}).kurt()")
 
-            if std_opt:
-                df_oders.append(f"df['step_{index}'] = (df['step_{index}'] - df['step_{index}'].mean()) / df['step_{index}'].std()")
-            if zero_opt:
-                df_oders.append(f"df['step_{index}'] = df['step_{index}'].apply(lambda x: x if abs(x) > 0.00001 else 0.00001)")
+            
+           
 
             expr = f"step_{index}"
             stack.append(expr)
@@ -493,7 +491,7 @@ def compute_time_series_length(node, cumulative_length=0,print_opt=False, column
 
 
 
-def f_coding(input:dict|str,df:pd.DataFrame,drop_opt=True,std_opt=False,zero_opt=True,columns_list:list=[],group_info=(0,'Ticker'))-> str|bool:
+def f_coding(input:dict|str,df:pd.DataFrame,drop_opt=True,std_opt=False,time_name:str='t_date',ticker_name:str='ticker',columns_list:list=[])-> str|bool:
     '''
     输入dict形如:
     "Factor Name": "AA_2_price_volatility_and_trading_activity",
@@ -508,11 +506,10 @@ def f_coding(input:dict|str,df:pd.DataFrame,drop_opt=True,std_opt=False,zero_opt
     参数
     drop_opt是否要删除中间计算步骤的df列(step1...不包含最后的因子列)
     std_opt是否要标准化
-    zero_opt是否要处理0值 max(接近于0,0.0001)
     columns_list: 需要被识别的列名,如果不传入会自动获取df的列名
-    group_info: (is_group 1为要group,如果要group,groupby的列名值)
-
-    如果group_info为(1,'ticker')最后会把每个ticker交界的地方前n行计算出的值设置为0
+    time_name: 时间列名
+    ticker_name: 股票列名
+    如果 处理单ticker数据请把time_name和ticker_name都设置为''
     '''
   
     match input:
@@ -557,7 +554,7 @@ def f_coding(input:dict|str,df:pd.DataFrame,drop_opt=True,std_opt=False,zero_opt
         df[str(num)] = num
         print(f"生成df['{num}'] = {num} 列(为了处理非列名常数项,有可能这一列不参与计算)")
     
-    df_orders,count=preorder2DFoder(preorder_expr,std_opt=std_opt,zero_opt=zero_opt,columns_list=columns_list)
+    df_orders,count=preorder2DFoder(preorder_expr,columns_list=columns_list)
     if  df_orders== False:
         print('----------------抽象语法树解析生成代码失败-------------')
         return False
@@ -568,14 +565,20 @@ def f_coding(input:dict|str,df:pd.DataFrame,drop_opt=True,std_opt=False,zero_opt
     steps_list = [f'step_{i}' for i in range(1, step_num + 1)] #[step_1, step_2,....]
 
 
-
+    if std_opt:
+        print(f'本次计算每步完成后会groupby{time_name}进行标准化')
     warnings.filterwarnings("ignore", category=FutureWarning)
     drop_column_list=steps_list
     df[drop_column_list]=0
     try:
-        for code in tqdm( df_orders,leave=False,desc='正在计算因子值'):
+        for index,code in enumerate(tqdm( df_orders,leave=False,desc='正在计算因子值')):
                print('正在执行的代码是{}'.format(code))
                exec(code)
+               if std_opt and time_name!='':
+                  df[f'step_{index+1}'] = df.groupby(time_name)[f'step_{index+1}'].transform(lambda x: (x - x.mean()) / x.std())
+               if std_opt and time_name=='':
+                   df[f'step_{index+1}'] = (df[f'step_{index+1}'] - df[f'step_{index+1}'].mean()) / df[f'step_{index+1}'].std()
+              
                print('----------------------此步骤执行完成---------------------------')
     except Exception as e:
                print(f"在执行解析生成的代码出现了错误: {e}")
@@ -595,13 +598,13 @@ def f_coding(input:dict|str,df:pd.DataFrame,drop_opt=True,std_opt=False,zero_opt
     df.rename(columns={name_old: name_new}, inplace=True)
     print(f'\n---------------df生成新的一列并重新命名为{name_new}-----------')
 
-    if group_info[0]==1:
+    if ticker_name!='':
         mm=expr_tree.get_time_series_lenth()
         print(f'------------------公式的时间序列长度为{mm}------------------')
         if mm !=0:
-             indices = df.groupby(group_info[1]).apply(lambda x: x.head(mm).index).explode().values
+             indices = df.groupby(ticker_name).apply(lambda x: x.head(mm).index).explode().values
              df.loc[indices,name_new]=None
-             print(f'----------已经将每个{group_info[1]}的前{mm}个值设为空值--------')
+             print(f'----------已经将每个{ticker_name}的前{mm}个值设为空值--------')
 
     print('\n#########################因子值计算完成#################################')
 

@@ -47,7 +47,7 @@ def group_std(df:pd.DataFrame,columns_list:list,by:str='t_date',):
    d3=d3.reset_index(drop=True,inplace=False)
    return d3
 
-from base.formulate_filter_AST import load_df
+from formulate_coding_AST import load_df
 
 def set_return(df:pd.DataFrame,time_column:str='t_date',ticker_column:str='ticker',close_column:str='close',return_column:str='one_day_return'):
   '''
