@@ -11,4 +11,4 @@
 /config/binance_api.yaml
 /*.ipynb
 /d2.csv
-/
+/.vscode
