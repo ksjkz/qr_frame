@@ -39,6 +39,40 @@ yd_mapping1 = {
 }
 
 
+yd_mapping = {
+    r'TICKER': 'ticker',
+    r'T_DATE': 't_date',
+    r'ADJ_D_OPEN': 'open_adj',
+    r'ADJ_D_HIGH': 'high_adj',
+    r'ADJ_D_LOW': 'low_adj',
+    r'ADJ_D_CLOSE': 'close_adj',
+    r'MCAP_IN_CIRCULATION': 'a_share_mcap_in_circulation',
+    r'YUAN_VOLUME': 'dollar_volume',
+    r'CLASS_NAME': 'class_name',
+    r'PB_RATIO': 'pb_ratio',
+    
+    r'ONE_DAY_RETURN_PREV': 'ret_lag_close',
+    r'D_OPEN_CHANGE': 'ret_lag_open',  #t日开盘相对于t-1日收盘的变化,adj过了
+    r'D_HIGH_CHANGE': 'ret_lag_high',  #t日高相对于t-1日收盘的变化,adj过了
+    r'D_LOW_CHANGE': 'ret_lag_low',     #t日低相对于t-1日收盘的变化,adj过了
+    r'D_CLOSE_CHANGE': 'ret_lag_close',  
+    r'D_VOLUME_CHANGE': 'dollar_volume_change',   # t日成交量相对于t-1日成交量变化
+    r'D_PB_CHANGE': 'pb_ratio_change',   #pb_ratio t日相对于t-1日
+    r'LOG_MCAP': 'log_mcap'    #np.log(a_share_mcap_in_circulation)
+}
+
+
+yd_mapping1 = {
+   
+    r'ret_lag_open': '(open_adj-close_adj/(1+ret_lag_close))/close_adj*(1+ret_lag_close)',  #t日开盘相对于t-1日收盘的变化,adj过了
+    r'ret_lag_high': '(high_adj-close_adj/(1+ret_lag_close))/close_adj*(1+ret_lag_close)',  #t日高相对于t-1日收盘的变化,adj过了
+    r'ret_lag_low': '(low_adj-close_adj/(1+ret_lag_close))/close_adj*(1+ret_lag_close)',     #t日低相对于t-1日收盘的变化,adj过了
+  
+    r'dollar_volume_change': 'ts_pct_change(dollar_volume,1)',   # t日成交量相对于t-1日成交量变化
+    r'pb_ratio_change': 'ts_pct_change(pb_ratio,1)',   #pb_ratio t日相对于t-1日
+    r'log_mcap': 'log(a_share_mcap_in_circulation)'    #np.log(a_share_mcap_in_circulation)
+}
+
 def trans_(input:str|list[str],mapping_dict:dict)->str|list[str]:
      '''
      这个函数根据mapping_dict通过正则表达式替换公式统一公式和df的列名

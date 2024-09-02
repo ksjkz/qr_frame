@@ -47,7 +47,7 @@ def load_df(df:pd.DataFrame, groupby_column:str='ticker', sort_column:str='t_dat
     if pd.api.types.is_datetime64_any_dtype(df[sort_column]) == False:
         df[sort_column] = pd.to_datetime(df[sort_column])
     # 按 groupby_column 列分组，并在每个组内按 sort_column 列排序
-    sorted_df = df.groupby(groupby_column, group_keys=False).apply(lambda x: x.sort_values(sort_column))
+    sorted_df = df.groupby(groupby_column, group_keys=True).apply(lambda x: x.sort_values(sort_column)).reset_index(drop=True)
     return sorted_df
 
 

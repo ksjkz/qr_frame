@@ -67,9 +67,9 @@ class Backtesting:
    
     def __init__(self,df:pd.DataFrame,factor_name:str='',opt:int=0,r_name:str='',t_name:str='',
                  ):
-        if not t_name  not in df.columns:
+        if not t_name   in df.columns:
                    raise ValueError(f"t_name '{t_name}' is either empty or not found in DataFrame columns.")
-        if not r_name  not in df.columns:
+        if not r_name   in df.columns:
                    raise ValueError(f"r_name '{r_name}' is either empty or not found in DataFrame columns.")
         self.df=df.dropna()
         self.r_name=r_name
@@ -133,7 +133,7 @@ class Backtesting:
                     logger.info(f'仅仅dropna,没做任何处理')
                     pass
         logger.info(f'已完成backtest初始化,df的shape为{self.df.shape}')
-        return self.df
+        
         
     def section_cul(self,opt:tuple=(1,0)):
         """
@@ -209,15 +209,16 @@ class Backtesting:
                self.section_cul_df[f'{columns_name}_cum']=self.section_cul_df[columns_name].cumsum()
           logger.info(f'已经成功进行rolling_cul,累加列保存在属性section_cul_df里')
           return self.section_cul_df
-    def run(self,get_basic_info_opt:tuple=(1,0),if_get_autocorr=False,autocorr_n:int=10):
+    def run(self,opt:tuple=(1,0),if_get_autocorr=False,autocorr_n:int=10):
         '''
         汇总执行其他方法
         '''
-        self.get_basic_info(opt=get_basic_info_opt)
+        self.section_cul(opt=opt)
+        self.get_basic_info()
         self.get_cum_info()
         if if_get_autocorr:
            self.get_autocorr(autocorr_n)
-        self.get_cum_info()
+        
         
     def get_autocorr(self,n:int=10,):
           if not hasattr(self, 'section_cul_df'):
@@ -252,9 +253,9 @@ def get_decile_return(df: pd.DataFrame, by: str='', n: int = 10,w_opt:tuple =(0,
              函数返回值的描述包含的key:  time	decile	weighted_return
          
          """
-         if not t_name not in df.columns:
+         if not t_name  in df.columns:
                    raise ValueError(f"t_name '{t_name}' is either empty or not found in DataFrame columns.")
-         if not r_name not in df.columns:
+         if not r_name  in df.columns:
                    raise ValueError(f"r_name '{r_name}' is either empty or not found in DataFrame columns.")
          if by not in df.columns:
                    raise ValueError(f"by '{by}' is either empty or not found in DataFrame columns.")

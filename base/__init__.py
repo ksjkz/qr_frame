@@ -21,3 +21,4 @@ from .my_df_func import*
 from .my_os_func import*
 from .get_tushare_data import*
 from .binance_trade_client import*
+from .mapping_columns_name import trans_old2_yd_data

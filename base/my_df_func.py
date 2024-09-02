@@ -44,6 +44,7 @@ def group_std(df:pd.DataFrame,columns_list:list,by:str='t_date',):
     group[columns_list] = scaler.fit_transform(group[columns_list])
     return group
    d3 = df.groupby(by).apply(standardize_group)
+   d3=d3.reset_index(drop=True,inplace=False)
    return d3
 
 from base.formulate_filter_AST import load_df
