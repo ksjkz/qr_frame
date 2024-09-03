@@ -10,7 +10,7 @@ for module_info in pkgutil.iter_modules(__path__):
     print(f"Importing module: {module_name}")
     importlib.import_module(f'.{module_name}', package=__name__)
 
-print("Modules loaded.")
+
 
 from .memory import show
 from .formulate_coding_AST import load_df
@@ -22,3 +22,4 @@ from .my_os_func import*
 from .get_tushare_data import*
 from .binance_trade_client import*
 from .mapping_columns_name import trans_old2_yd_data
+print("Modules loaded.")

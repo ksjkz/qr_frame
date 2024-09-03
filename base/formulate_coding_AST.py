@@ -564,14 +564,13 @@ def f_coding(input:dict|str,df:pd.DataFrame,drop_opt=True,std_opt=False,time_nam
     step_num=count   #步骤数
     steps_list = [f'step_{i}' for i in range(1, step_num + 1)] #[step_1, step_2,....]
 
-
-    if std_opt:
-        print(f'本次计算每步完成后会groupby{time_name}进行标准化')
+     
     warnings.filterwarnings("ignore", category=FutureWarning)
     drop_column_list=steps_list
     df[drop_column_list]=0
 
     if std_opt and time_name!='':
+     print(f'本次计算每步完成后会groupby{time_name}进行标准化')
      try:
         for index,code in enumerate(tqdm( df_orders,leave=False,desc='正在计算因子值')):
                print('正在执行的代码是{}'.format(code))
@@ -583,6 +582,7 @@ def f_coding(input:dict|str,df:pd.DataFrame,drop_opt=True,std_opt=False,time_nam
                return False
      
     if std_opt and time_name=='':
+        print(f'本次计算每步完成后会进行标准化')
         try:
          for index,code in enumerate(tqdm( df_orders,leave=False,desc='正在计算因子值')):
                print('正在执行的代码是{}'.format(code))
@@ -594,6 +594,7 @@ def f_coding(input:dict|str,df:pd.DataFrame,drop_opt=True,std_opt=False,time_nam
                return False
         
     if not std_opt:
+        print(f'本次计算不进行标准化')
         try:
          for index,code in enumerate(tqdm( df_orders,leave=False,desc='正在计算因子值')):
                print('正在执行的代码是{}'.format(code))

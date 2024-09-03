@@ -15,7 +15,7 @@ import json
 import os
 import math
 from IPython.display import clear_output
-from base.factor_evaluate import Eval
+#from base.factor_evaluate import Eval
 import time
 import random
 from base.formulate_coding_AST import *
