@@ -570,19 +570,39 @@ def f_coding(input:dict|str,df:pd.DataFrame,drop_opt=True,std_opt=False,time_nam
     warnings.filterwarnings("ignore", category=FutureWarning)
     drop_column_list=steps_list
     df[drop_column_list]=0
-    try:
+
+    if std_opt and time_name!='':
+     try:
         for index,code in enumerate(tqdm( df_orders,leave=False,desc='正在计算因子值')):
                print('正在执行的代码是{}'.format(code))
                exec(code)
-               if std_opt and time_name!='':
-                  df[f'step_{index+1}'] = df.groupby(time_name)[f'step_{index+1}'].transform(lambda x: (x - x.mean()) / x.std())
-               if std_opt and time_name=='':
-                   df[f'step_{index+1}'] = (df[f'step_{index+1}'] - df[f'step_{index+1}'].mean()) / df[f'step_{index+1}'].std()
-              
+               df[f'step_{index+1}'] = df.groupby(time_name)[f'step_{index+1}'].transform(lambda x: (x - x.mean()) / x.std())
                print('----------------------此步骤执行完成---------------------------')
-    except Exception as e:
+     except Exception as e:
                print(f"在执行解析生成的代码出现了错误: {e}")
                return False
+     
+    if std_opt and time_name=='':
+        try:
+         for index,code in enumerate(tqdm( df_orders,leave=False,desc='正在计算因子值')):
+               print('正在执行的代码是{}'.format(code))
+               exec(code)
+               df[f'step_{index+1}'] = (df[f'step_{index+1}'] - df[f'step_{index+1}'].mean()) / df[f'step_{index+1}'].std()
+               print('----------------------此步骤执行完成---------------------------')
+        except Exception as e:
+               print(f"在执行解析生成的代码出现了错误: {e}")
+               return False
+        
+    if not std_opt:
+        try:
+         for index,code in enumerate(tqdm( df_orders,leave=False,desc='正在计算因子值')):
+               print('正在执行的代码是{}'.format(code))
+               exec(code)
+               print('----------------------此步骤执行完成---------------------------')
+        except Exception as e:
+               print(f"在执行解析生成的代码出现了错误: {e}")
+               return False
+
     
 
     print('\n------------------全部计算步骤已经完成------------')
