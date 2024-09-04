@@ -79,6 +79,7 @@ class Get_data:
                          break
                      except:
                          pass
+        merged_df = merged_df.reset_index()
 
         return merged_df
 

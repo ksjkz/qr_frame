@@ -45,7 +45,7 @@ def load_df(df:pd.DataFrame, groupby_column:str='ticker', sort_column:str='t_dat
     """
     # 将排序列转换为日期时间类型（如果适用）
     if pd.api.types.is_datetime64_any_dtype(df[sort_column]) == False:
-        df[sort_column] = pd.to_datetime(df[sort_column])
+        df[sort_column] = pd.to_datetime(df[sort_column].astype(str))
     # 按 groupby_column 列分组，并在每个组内按 sort_column 列排序
     sorted_df = df.groupby(groupby_column, group_keys=True).apply(lambda x: x.sort_values(sort_column)).reset_index(drop=True)
     return sorted_df
@@ -296,7 +296,7 @@ def reconstruct_expression(preorder_expr:list)->str:
     return stack[0]
 
 
-def preorder2DFoder(preorder_expr:list,columns_list:list=columns_list)-> Tuple[List[str], int]:
+def preorder2DFoder(preorder_expr:list,columns_list:list=columns_list,relu_opt=True)-> Tuple[List[str], int]:
     '''
     通过前序表达式通过堆栈返回df命令和命令步骤数(不算每步之后的标准化)
     std_opt:是否每一步计算后标准化
@@ -421,6 +421,8 @@ def preorder2DFoder(preorder_expr:list,columns_list:list=columns_list)-> Tuple[L
                     df_oders.append(f"df['step_{index}']=df['{args[0]}'].rolling(window={args[1]}).skew()")
                 case 'ts_kurt':
                     df_oders.append(f"df['step_{index}']=df['{args[0]}'].rolling(window={args[1]}).kurt()")
+            if relu_opt:
+                df_oders.append(f"df['step_{index}'] = df['step_{index}'].apply(lambda x: x if abs(x) > 0.00001 else 0.00001)")
 
             
            
@@ -491,7 +493,7 @@ def compute_time_series_length(node, cumulative_length=0,print_opt=False, column
 
 
 
-def f_coding(input:dict|str,df:pd.DataFrame,drop_opt=True,std_opt=False,time_name:str='t_date',ticker_name:str='ticker',columns_list:list=[])-> str|bool:
+def f_coding(input:dict|str,df:pd.DataFrame,drop_opt=True,std_opt=False,relu_opt=True,time_name:str='t_date',ticker_name:str='ticker',columns_list:list=[])-> str|bool:
     '''
     输入dict形如:
     "Factor Name": "AA_2_price_volatility_and_trading_activity",
@@ -506,6 +508,7 @@ def f_coding(input:dict|str,df:pd.DataFrame,drop_opt=True,std_opt=False,time_nam
     参数
     drop_opt是否要删除中间计算步骤的df列(step1...不包含最后的因子列)
     std_opt是否要标准化
+    relu_opt每个step执行完了是不是还要过一下relu函数(处理log为nan)
     columns_list: 需要被识别的列名,如果不传入会自动获取df的列名
     time_name: 时间列名
     ticker_name: 股票列名
@@ -554,7 +557,7 @@ def f_coding(input:dict|str,df:pd.DataFrame,drop_opt=True,std_opt=False,time_nam
         df[str(num)] = num
         print(f"生成df['{num}'] = {num} 列(为了处理非列名常数项,有可能这一列不参与计算)")
     
-    df_orders,count=preorder2DFoder(preorder_expr,columns_list=columns_list)
+    df_orders,count=preorder2DFoder(preorder_expr,columns_list=columns_list,relu_opt=relu_opt)
     if  df_orders== False:
         print('----------------抽象语法树解析生成代码失败-------------')
         return False
