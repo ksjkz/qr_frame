@@ -135,16 +135,16 @@ class Backtesting:
         logger.info(f'已完成backtest初始化,df的shape为{self.df.shape}')
         
         
-    def section_cul(self,opt:tuple=(1,0)):
+    def section_cul(self,opt:int|str=0):
         """
-        opt:x,y,z:默认值,计算ic和rankic
-        x:代表计算相关系数的时候加不加权 0代表不加权,除0以外代表加权
-        y:在x!=0的基础上,z为加权列的列名,类型为 str
+        opt:
+            0:不加权
+            z:按z加权
         """
         grouped_df=self.df.groupby(self.t_name)
         backtest_list=[]    
         match opt:
-            case (0,_):
+            case 0:
                 for name,group in tqdm(grouped_df,leave=True,desc='正在回测,不加权'):
                          rank_ic, p_rank_ic = spearmanr(group[self.factor_name],group[self.r_name])
                          ic, p_ic = pearsonr(group[self.factor_name],group[self.r_name])
@@ -155,7 +155,7 @@ class Backtesting:
                          i['p_rank_ic']=p_rank_ic
                          i['p_ic']=p_ic
                          backtest_list.append(i)
-            case (_,z):
+            case z:
                     if not(z in self.df.columns):
                         raise ValueError(f'{z} NOT in self.df.columns')
                     for name,group in tqdm(grouped_df,leave=True,desc=f'正在回测,按{z}加权'):
@@ -209,9 +209,10 @@ class Backtesting:
                self.section_cul_df[f'{columns_name}_cum']=self.section_cul_df[columns_name].cumsum()
           logger.info(f'已经成功进行rolling_cul,累加列保存在属性section_cul_df里')
           return self.section_cul_df
-    def run(self,opt:tuple=(1,0),if_get_autocorr=False,autocorr_n:int=10):
+    def run(self,opt:int|str=0,if_get_autocorr=False,autocorr_n:int=10):
         '''
         汇总执行其他方法
+        opt:0代表不加权,除0以外代表加权,opt为权重列名
         '''
         self.section_cul(opt=opt)
         self.get_basic_info()
@@ -234,7 +235,7 @@ class Backtesting:
                   
 
 
-def get_decile_return(df: pd.DataFrame, by: str='', n: int = 10,w_opt:tuple =(0,0),r_opt:int=0,t_name:str='',r_name:str='') -> pd.DataFrame|list[dict]:
+def get_decile_return(df: pd.DataFrame, by: str='', n: int = 10,w_opt=0,r_opt:int=0,t_name:str='',r_name:str='') -> pd.DataFrame|list[dict]:
          """
         功能描述:
          按截面按因子值分为n组，计算每组加权收益率
@@ -243,16 +244,14 @@ def get_decile_return(df: pd.DataFrame, by: str='', n: int = 10,w_opt:tuple =(0,
           df: 包含时间,return和因子值的df
           by: 因子值的列名
           n: 分组数
-          opt 选项 (is-weight,weight_opt,weight_by,r_opt)
-          is-weight 0不加权,其他加权
-          weight_opt 0:市值,1:log市值, _:自定义加权
-          weight_by:自定义加权的列名
+          w_opt: 0不加权，其他请输入权重的列名
           r_opt 0返回df,1返回dict
 
         返回值:
              函数返回值的描述包含的key:  time	decile	weighted_return
          
          """
+         df=df.copy()
          if not t_name  in df.columns:
                    raise ValueError(f"t_name '{t_name}' is either empty or not found in DataFrame columns.")
          if not r_name  in df.columns:
@@ -273,11 +272,11 @@ def get_decile_return(df: pd.DataFrame, by: str='', n: int = 10,w_opt:tuple =(0,
                                  print(f'第{name} 分组{decile}不存在')
                                  continue
                           match w_opt:
-                                 case (0,_):
+                                 case 0:
                                          weighted_return=decile_group[r_name].mean()
                                          desc='不加权'
                                  
-                                 case (_,z):
+                                 case z:
                                         if not(z in df.columns):
                                                    raise ValueError(f'{z} NOT in self.df.columns')
                             
@@ -302,10 +301,20 @@ def get_decile_return(df: pd.DataFrame, by: str='', n: int = 10,w_opt:tuple =(0,
 class Decile:
     """
     分组计算每组收益率
+     df: 包含时间,return和因子值的df
+     f_name: 因子值的列名
+     n: 分组数
+     w_opt: 0不加权，其他请输入权重的列名
+     t_name: 时间列名
+     r_name: 收益率列名
+     if_run: 是否自动运行
     """
-    def __init__(self,df: pd.DataFrame, by: str='', n:int = 10,w_opt:tuple =(0,0),t_name:str='',r_name:str='') -> pd.DataFrame:
-        self.df=get_decile_return(df=df, by=by, n=n,w_opt=w_opt,r_opt=0,t_name=t_name,r_name=r_name)
+    def __init__(self,df: pd.DataFrame, f_name: str='', n:int = 10,w_opt:int|str =0,t_name:str='',r_name:str='',if_run=True) -> pd.DataFrame:
+        self.df=get_decile_return(df=df, by=f_name, n=n,w_opt=w_opt,r_opt=0,t_name=t_name,r_name=r_name)
         self.df['time'] = pd.to_datetime(self.df['time'])
+        if if_run:
+            self.run()
+
     def get_mean(self):
         setattr(self, 'mean_df', self.df.groupby('decile')['average_return'].mean())
         return self.mean_df
@@ -321,7 +330,7 @@ class Decile:
         for _,group in self.df.groupby('decile'):
                   self.df.loc[group.index,'average_return_cumsum']=group['weighted_return'].cumsum()
         return self.df
-    def run(self,opt):
+    def run(self):
            self.get_mean()
            self.get_cumprod()
            return self.df,self.mean_df

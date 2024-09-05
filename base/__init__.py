@@ -18,8 +18,9 @@ from .formulate_coding_AST import f_coding
 from .my_backtesting import Backtesting
 from .my_backtesting import Decile
 from .my_df_func import*
-from .my_os_func import*
-from .get_tushare_data import*
-from .binance_trade_client import*
-from .mapping_columns_name import trans_old2_yd_data
+# from .my_os_func import*
+from .get_tushare_data import tushare_date_loader
+# from .get_tushare_data import Get_tushare_data
+# from .binance_trade_client import*
+# from .mapping_columns_name import trans_old2_yd_data
 print("Modules loaded.")

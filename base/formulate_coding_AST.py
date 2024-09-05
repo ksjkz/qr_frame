@@ -296,7 +296,7 @@ def reconstruct_expression(preorder_expr:list)->str:
     return stack[0]
 
 
-def preorder2DFoder(preorder_expr:list,columns_list:list=columns_list,relu_opt=True)-> Tuple[List[str], int]:
+def preorder2DFoder(preorder_expr:list,columns_list:list=columns_list,zero_opt=True,relu_opt=True)-> Tuple[List[str], int]:
     '''
     通过前序表达式通过堆栈返回df命令和命令步骤数(不算每步之后的标准化)
     std_opt:是否每一步计算后标准化
@@ -421,8 +421,11 @@ def preorder2DFoder(preorder_expr:list,columns_list:list=columns_list,relu_opt=T
                     df_oders.append(f"df['step_{index}']=df['{args[0]}'].rolling(window={args[1]}).skew()")
                 case 'ts_kurt':
                     df_oders.append(f"df['step_{index}']=df['{args[0]}'].rolling(window={args[1]}).kurt()")
-            if relu_opt:
+            if zero_opt:
                 df_oders.append(f"df['step_{index}'] = df['step_{index}'].apply(lambda x: x if abs(x) > 0.00001 else 0.00001)")
+
+            if relu_opt:
+                df_oders.append(f"df['step_{index}'] = df['step_{index}'].apply(lambda x: x if x > 0.00001 else 0.00001)")
 
             
            
@@ -493,7 +496,7 @@ def compute_time_series_length(node, cumulative_length=0,print_opt=False, column
 
 
 
-def f_coding(input:dict|str,df:pd.DataFrame,drop_opt=True,std_opt=False,relu_opt=True,time_name:str='t_date',ticker_name:str='ticker',columns_list:list=[])-> str|bool:
+def f_coding(input:dict|str,df:pd.DataFrame,drop_opt=True,std_opt=False,zero_opt=True,relu_opt=True,time_name:str='t_date',ticker_name:str='ticker',columns_list:list=[])-> str|bool:
     '''
     输入dict形如:
     "Factor Name": "AA_2_price_volatility_and_trading_activity",
@@ -557,13 +560,13 @@ def f_coding(input:dict|str,df:pd.DataFrame,drop_opt=True,std_opt=False,relu_opt
         df[str(num)] = num
         print(f"生成df['{num}'] = {num} 列(为了处理非列名常数项,有可能这一列不参与计算)")
     
-    df_orders,count=preorder2DFoder(preorder_expr,columns_list=columns_list,relu_opt=relu_opt)
+    df_orders,count=preorder2DFoder(preorder_expr,columns_list=columns_list,relu_opt=relu_opt,zero_opt=zero_opt)
     if  df_orders== False:
         print('----------------抽象语法树解析生成代码失败-------------')
         return False
     print('\n-------------每一步的代码已由抽象语法树解析生成---------------')
-    for i in  df_orders:
-        print(i)
+    # for i in  df_orders:
+    #     print(i)
     step_num=count   #步骤数
     steps_list = [f'step_{i}' for i in range(1, step_num + 1)] #[step_1, step_2,....]
 

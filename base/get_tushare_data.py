@@ -10,13 +10,14 @@ import requests as req
 import re
 from tqdm import tqdm
 import time
+from base.my_os_func import get_all_dir,read_csv_from_paths_to_one_df
+from base.formulate_coding_AST import load_df
 
 
 
 
 
-
-class Get_data:
+class Get_tushare_data:
     def __init__(self):
         with open("config/tushare_api.yaml", "r", encoding="utf-8") as file:
           config = yaml.safe_load(file)
@@ -99,95 +100,16 @@ class Get_data:
         filtered_df = adj_factor_df[(adj_factor_df['trade_date'] >= start_date) & (adj_factor_df['trade_date'] <= end_date)]
         return filtered_df
     
-    def update_data(self, file_path:str='d2.csv',key:str='df',cul_adj_opt:str='qfq',save_path:str=''):
+def tushare_date_loader(dir_path:str='tushare')->pd.DataFrame:
+    a=get_all_dir(dir_path)
+    df=read_csv_from_paths_to_one_df(a)
+    df=load_df(df,groupby_column='ts_code',sort_column='trade_date')
+    return df
+
+
 
         
-        today=datetime.now().strftime('%Y%m%d')#str like '20240830'
-        one_year_ago = (datetime.now() - timedelta(days=365)).strftime('%Y%m%d')
-        print(f'正在执行 更新A股日频数据到今天({today})')
-
-        while True:
-             try:
-                  trade_days_list=self.get_trade_days(start_date= one_year_ago,end_date=today)
-                  break
-             except:
-                  time.sleep(2)
-        print('交易日列表获取完成')
-
-        print(f"Loading data from {file_path}...")
-        if re.match(r'.*\.h5$', file_path, re.IGNORECASE) is not None:
-             df = pd.read_hdf(file_path, key=key)
-        elif re.match(r'.*\.csv$', file_path, re.IGNORECASE) is not None :
        
-             df=pd.read_csv(file_path)
-             df.reset_index(inplace=True,drop=True)
-             try:
-                df.drop(columns=[ 'Unnamed: 0'], inplace=True)
-             except:
-                 pass
-
-        df_trade_days_list=df['trade_date'].unique().astype(str)
-        residue_date_list=[item for item in trade_days_list if item not in df_trade_days_list]#获取df到现在缺失的天
-        print(f'{file_path}还要补全的天有{residue_date_list}')
-        df.set_index(['ts_code', 'trade_date'], inplace=True)
-
-        while True:
-           try:
-                 d1=self.get_day_data(trade_date= residue_date_list[0],if_get_adj_factor=True)
-                 break
-           except:
-                time.sleep(2)
-        print(f'{residue_date_list[0]}的数据已经获得')
-
-        if len(residue_date_list)>1:
-          print('现在获取剩下几天的数据')
-          for i in tqdm(residue_date_list[1:],leave=True,initial=1,):
-             while True:
-                 try:
-                      d2=self.get_day_data(trade_date= i,if_get_adj_factor=True)
-                      d1=pd.concat([d1,d2],axis=0)
-                      break
-                 except :
-                      time.sleep(2)
-          print('剩下几天的数据已经获得')
-        df=pd.concat([d1,df],axis=0)
-        df=df.reset_index()
-
-        if cul_adj_opt=='qfq':
-            print('正在计算前复权 赋值到列如qfq_close')
-            for _,group in df.groupby('ts_code'):
-                df.loc[group.index,'qfq_open'] = group['open'] * group['adj_factor'] / group['adj_factor'].iloc[0]
-                df.loc[group.index,'qfq_close'] = group['close'] * group['adj_factor'] / group['adj_factor'].iloc[0]
-                df.loc[group.index,'qfq_high'] = group['high'] * group['adj_factor'] / group['adj_factor'].iloc[0]
-                df.loc[group.index,'qfq_low'] = group['low'] * group['adj_factor'] / group['adj_factor'].iloc[0]
-        elif cul_adj_opt=='hfq':
-            print('正在计算后复权 赋值到列如hfq_close')
-            for group in df.groupby('ts_code'):
-                df.loc[group.index,'hfq_open'] = group['open'] * group['adj_factor'] / group['adj_factor'].iloc[-1]
-                df.loc[group.index,'hfq_close'] = group['close'] * group['adj_factor'] / group['adj_factor'].iloc[-1]
-                df.loc[group.index,'hfq_high'] = group['high'] * group['adj_factor'] / group['adj_factor'].iloc[-1]
-                df.loc[group.index,'hfq_low'] = group['low'] * group['adj_factor'] / group['adj_factor'].iloc[-1]
-        
-        else :
-            print(f'输入cul_adj_opt为{cul_adj_opt},不是qfq或者hfq,因此没有就adj_factor进行计算复权价格操作')
-
-
-
-        if save_path=='':
-            pass
-        else:
-            if re.match(r'.*\.h5$', file_path, re.IGNORECASE) is not None:
-               df.to_hdf(save_path,key='df', mode='w')
-               print(f'已经保存到{save_path}')
-            elif re.match(r'.*\.csv$', file_path, re.IGNORECASE) is not None :
-               df.to_csv(save_path)
-               print(f'已经保存到{save_path}')
-            else:
-                print('输入的save_path不是h5或者csv')
-                pass
-
-        return df
-    
 
 
         
