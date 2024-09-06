@@ -65,8 +65,8 @@ class Backtesting:
                     添加到section_cul_df 的列中
     """
    
-    def __init__(self,df:pd.DataFrame,factor_name:str='',opt:int=0,r_name:str='',t_name:str='',
-                 ):
+    def __init__(self,df:pd.DataFrame,factor_name:str='',opt:int=0,r_name:str='',t_name:str='',ticker_name:str=''):
+                 
         if not t_name   in df.columns:
                    raise ValueError(f"t_name '{t_name}' is either empty or not found in DataFrame columns.")
         if not r_name   in df.columns:
@@ -74,6 +74,7 @@ class Backtesting:
         self.df=df.dropna()
         self.r_name=r_name
         self.t_name=t_name
+        self.ticker_name=ticker_name
         if factor_name=='' or (not (factor_name in self.df.columns)):
             raise ValueError('factor_name is wrong')
         else:
@@ -213,12 +214,14 @@ class Backtesting:
         '''
         汇总执行其他方法
         opt:0代表不加权,除0以外代表加权,opt为权重列名
+        if_get_autocorr:是否计算自相关系数 可以得到rankic的自相关系数 和factor groupby('ticker')以后的自相关系数
         '''
         self.section_cul(opt=opt)
         self.get_basic_info()
         self.get_cum_info()
         if if_get_autocorr:
            self.get_autocorr(autocorr_n)
+           self.get_grouped_acf(autocorr_n)
         
         
     def get_autocorr(self,n:int=10,):
@@ -227,9 +230,28 @@ class Backtesting:
           y1=self.section_cul_df['rank_ic'].to_list()
           
           autocorr = acf(y1, nlags=n)[1:]
-          setattr(self, 'autocorr', autocorr)
-          logger.info(f'已经成功进行acf计算,保存在属性autocorr里,为list,保存滞后1到{n}期的autocorr')
+          setattr(self, 'autocorr_rankic_day', autocorr)
+          logger.info(f'已经成功对rankic_mean进行acf计算,保存在属性autocorr_rankic_mean_day里,为list,保存滞后1到{n}期的autocorr')
           return autocorr
+
+    def get_grouped_acf(self,n:int=10,):
+         grouped = self.df.groupby(self.ticker_name)
+         acf_results = pd.DataFrame()
+         for name, group in grouped:
+                       acf_values = acf(group[self.factor_name].to_list(), nlags=n, fft=False)
+                       acf_df = pd.DataFrame({
+                                  'group_col': [name] * len(acf_values),
+                                  'lag': np.arange(len(acf_values)),
+                                   'acf': acf_values
+                                   })
+                       acf_results = pd.concat([acf_results, acf_df], ignore_index=True)
+         setattr(self, 'autocorr_by_ticker_df',  acf_results)
+         logger.info(f'已经成功groupby ticker对{self.factor_name}进行acf计算,保存在属性autocorr_by_ticker_df里,保存滞后1到{n}期的autocorr')
+         mmm=self.autocorr_by_ticker_df.groupby('lag')['acf'].mean().reset_index()
+         setattr(self, 'autocorr_by_ticker_mean_df', mmm)
+         logger.info(f'已经成功对autocorr_by_ticker_df groupby(lag)进行mean,保存在属性autocorr_by_ticker_mean_df里')
+
+         return acf_results,mmm
           
               
                   
