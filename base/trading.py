@@ -7,6 +7,28 @@ from pyecharts.charts import Line
 from pyecharts.globals import ThemeType
 
 class Trading:
+    """
+    初始化参数
+    df initial_capital transaction_cost time_name
+    方法
+    find_value(trade_date, ticker,column)
+
+    get_next_day(trade_date)
+
+    get_prev_day(trade_date)
+
+    trans_time(trade_date)
+
+    buy(ticker,trade_date,buy_price,investment) 
+
+    sell(ticker,quantity,trade_date,sell_price)
+
+    merge_holdings()
+
+    get_total_capital(trade_date,is_print=True)
+    
+    total_capital_line_plot()
+    """
     def __init__(self,
                  df: pd.DataFrame,  #df过一下load_df
                  initial_capital=150_000,                      #初始资金
