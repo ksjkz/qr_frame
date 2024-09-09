@@ -140,7 +140,7 @@ class Trading:
             total_capital += item.get('quantity') * self.find_value(trade_date=trade_date,ticker=item.get('ticker'),column=self.close_name) * 100
         total_capital=round(total_capital+self.cash,2)
         if is_print:
-            print('总资产',total_capital)
+            print(trade_date,'总资产',total_capital)
         self.total_capital[trade_date]=total_capital
         return total_capital
     
