@@ -250,7 +250,6 @@ class Backtesting:
          mmm=self.autocorr_by_ticker_df.groupby('lag')['acf'].mean().reset_index()
          setattr(self, 'autocorr_by_ticker_mean_df', mmm)
          logger.info(f'已经成功对autocorr_by_ticker_df groupby(lag)进行mean,保存在属性autocorr_by_ticker_mean_df里')
-
          return acf_results,mmm
           
               
