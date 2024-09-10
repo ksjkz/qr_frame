@@ -422,10 +422,10 @@ def preorder2DFoder(preorder_expr:list,columns_list:list=columns_list,zero_opt=T
                 case 'ts_kurt':
                     df_oders.append(f"df['step_{index}']=df['{args[0]}'].rolling(window={args[1]}).kurt()")
             if zero_opt:
-                df_oders.append(f"df['step_{index}'] = df['step_{index}'].apply(lambda x: x if abs(x) > 0.00001 else 0.00001)")
+                df_oders.append(f"df['step_{index}'] = df['step_{index}'].apply(lambda x: x if abs(x) > 0.0001 else 0.0001)")
 
             if relu_opt:
-                df_oders.append(f"df['step_{index}'] = df['step_{index}'].apply(lambda x: x if x > 0.00001 else 0.00001)")
+                df_oders.append(f"df['step_{index}'] = df['step_{index}'].apply(lambda x: x if x > 0.0001 else 0.0001)")
 
             
            
