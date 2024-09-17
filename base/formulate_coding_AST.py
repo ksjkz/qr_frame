@@ -233,7 +233,10 @@ arity = {
     '/':2,
     'Div':2,
 
+    'mod': 2,
+    'exp': 2,
     'pow':2,
+    'square':1,
     'sqrt': 1,
     'log': 1,
     'abs': 1,
@@ -357,11 +360,16 @@ def preorder2DFoder(preorder_expr:list,columns_list:list=columns_list,zero_opt=T
                 case 'Div':
                     df_oders.append(f"df['step_{index}']=np.where(df['{args[1]}'] != 0, df['{args[0]}'] / df['{args[1]}'], df['{args[0]}']/0.0001)")
 
-
+                case 'mod':
+                    df_oders.append(f"df['step_{index}']=df['{args[0]}']%df['{args[1]}']")
+                case 'exp':
+                    df_oders.append(f"df['step_{index}']=np.exp(df['{args[0]}'])")
                 case 'sqrt':
                     df_oders.append(f"df['step_{index}']=np.sqrt(df['{args[0]}'])")
                 case 'pow':
                     df_oders.append(f"df['step_{index}']=df['{args[0]}']**{args[1]}")
+                case 'square':
+                    df_oders.append(f"df['step_{index}']=df['{args[0]}']**2")
                 case 'log':
                     df_oders.append(f"df['step_{index}']=np.log(df['{args[0]}'])")
                 case 'abs':
