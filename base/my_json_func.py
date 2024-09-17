@@ -29,7 +29,7 @@ def read_jsonl(file_path: str):
         for line in file:
             yield json.loads(line)
 
-def jsonl_to_dataframe(file_path: str) -> pd.DataFrame:
+def jsonl_to_df(file_path: str) -> pd.DataFrame:
     '''
     读取 JSON Lines 文件并转换为 pandas DataFrame
     '''

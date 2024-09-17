@@ -255,8 +255,8 @@ arity = {
     # Time Series Operators
     #ts函数 第一个为列,第二个为period 如 ts_sum(ADJ_D_CLOSE, 10)
     
-    'ts_pct_change': 2,  #计算涨跌幅,pd.pct_change 遇到缺失值不填充,
-    'ts_sum': 2,
+    'ts_pct_change': 2,  #计算涨跌幅,pd.pct_change 遇到缺失值不填充,第二个参数为1就有意义
+    'ts_sum': 2, #正常有关rolling的第二个参数至少为2
     'ts_prod': 2,
     'ts_covariance': 3,    #ts_covariance(ADJ_D_CLOSE,ADJ_D_OPEN, 10)
     'ts_corr':3,
@@ -270,8 +270,8 @@ arity = {
     'ts_median':2,
     'ts_argmax': 2,
     'ts_argmin': 2,
-    'ts_skew': 2, #计算偏度
-    'ts_kurt': 2, #计算峰度
+    'ts_skew': 2, #计算偏度 至少要rolling 3才有意义
+    'ts_kurt': 2, #计算峰度 至少要rolling 3才有意义
     
 }
 
