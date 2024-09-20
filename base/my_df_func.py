@@ -33,20 +33,27 @@ def set_return(df:pd.DataFrame,time_column:str='t_date',ticker_column:str='ticke
 
 
 
-def linear_reg(df, f: str, r:str,is_print=False,is_plot=False):
-    # 创建线性回归模型
+def linear_reg(df, f: str, r:str,is_print=False,):
+    '''
+    线性回归
+    df: pd.DataFrame
+    f: str  用于回归的列1
+    r: str   用于回归的列2
+    is_print: bool
+
+    返回值:
+    r2: float
+    lenth: int 回归数据的长度
+    slope: float
+    intercept: float
+    '''
     model = LinearRegression()
-    df_clean = df[[f, r]].dropna()
-    # 重新定义 X 和 y，确保没有 NaN 值，并且长度一致
+    df_clean = df[[f, r]].dropna()# 重新定义 X 和 y，确保没有 NaN 值，并且长度一致
     X_clean = df_clean[[f]]  # 二维数据
     y_clean = df_clean[r]    # 一维目标数据
     lenth = X_clean.shape[0]
-    # 拟合线性回归模型
     model.fit(X_clean, y_clean)
-    # 使用模型预测结果
     y_pred = model.predict( X_clean)
-
-    # 计算 R²
     r2 = r2_score(y_clean, y_pred)
     slope = model.coef_[0]  # 斜率
     intercept = model.intercept_  # 截距
@@ -55,24 +62,28 @@ def linear_reg(df, f: str, r:str,is_print=False,is_plot=False):
         print(f"R²: {r2}")
         print(f"斜率 (Slope): {slope}")
         print(f"截距 (Intercept): {intercept}")
-
-    if is_plot:
-       
-
-                 plt.figure(figsize=(8, 6))
-                 sns.lineplot(x=X_clean.iloc[:, 0], y=y_pred, color='blue', label='fitting line (yhat)')
-                 sns.scatterplot(x=X_clean.iloc[:, 0], y=y_clean, color='red', label='original data (y)')
-                 plt.legend()
-                 plt.title('linear regression and law data point')
-                 plt.xlabel('X')
-                 plt.ylabel('y')
-                 buf = BytesIO()
-                 plt.savefig(buf, format='png')
-                 buf.seek(0)  # 将指针移到文件的开头
-                 plt.close()
-                 display(Image(data=buf.getvalue()))
-                 buf.close()
        
     return r2,lenth,slope,intercept
+# 定义一个函数来去除极值
+def remove_df_outliers(df:pd.DataFrame,col:str,by:str='t_date',):
+    '''
+    对于单列，groupby后去除极值
+    如果不用groupby，请将by设置为''
+    返回去除极值后的df(不会对原来df进行修改)
+    '''
+    def remove_outliers(group):
+         Q1 = group[col].quantile(0.25)  # 第1四分位数
+         Q3 = group[col].quantile(0.75)  # 第3四分位数
+         IQR = Q3 - Q1  # 四分位距
+         lower_bound = Q1 - 1.5 * IQR  # 下界
+         upper_bound = Q3 + 1.5 * IQR  # 上界
+         return group[(group[col] >= lower_bound) & (group[col] <= upper_bound)]
+    if by == '':
+        return df.apply(remove_outliers).reset_index(drop=True)
+    return df.groupby(by).apply(remove_outliers).reset_index(drop=True)
+       
+
+
+
    
 

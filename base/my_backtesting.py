@@ -31,7 +31,29 @@ from pyecharts import options as opts
 from scipy.stats import rankdata
 from wcorr import WeightedCorr
 from statsmodels.tsa.stattools import acf
-
+def cal_corr(df:pd.DataFrame,col1:str,col2:str,by:str='t_date'):
+    '''
+    对df的col1和col2做相关性分析，返回相关性和平均相关性
+    如果不用分组,请将by设为''
+    '''
+    def calc_correlations(group):
+        pearson_corr = group[col1].corr(group[col2], method='pearson')
+        kendall_corr = group[col1].corr(group[col2], method='kendall')
+        spearman_corr = group[col1].corr(group[col2], method='spearman')
+    
+        return pd.Series({
+             'pearson': pearson_corr,
+             'kendall': kendall_corr,
+             'spearman': spearman_corr
+    })
+    if by=='':
+        print('没有分组,返回correlations')
+        correlations = df.apply(calc_correlations)
+        return correlations
+    print(f'按{by}分组,返回correlations,average_correlations')
+    correlations = df.groupby(by).apply(calc_correlations)
+    average_correlations = correlations.mean()
+    return correlations,average_correlations
 
 
 class Backtesting:
