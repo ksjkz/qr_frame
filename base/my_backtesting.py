@@ -352,11 +352,10 @@ class Decile:
      r_name: 收益率列名
      if_run: 是否自动运行
     """
-    def __init__(self,df: pd.DataFrame, f_name: str='', n:int = 10,w_opt:int|str =0,t_name:str='',r_name:str='',if_run=True) -> pd.DataFrame:
+    def __init__(self,df: pd.DataFrame, f_name: str='', n:int = 10,w_opt:int|str =0,t_name:str='',r_name:str='',) -> pd.DataFrame:
         self.df=get_decile_return(df=df, by=f_name, n=n,w_opt=w_opt,r_opt=0,t_name=t_name,r_name=r_name)
         self.df['time'] = pd.to_datetime(self.df['time'])
-        if if_run:
-            self.run()
+       
 
     def get_mean(self):
         setattr(self, 'mean_df', self.df.groupby('decile')['average_return'].mean())
@@ -367,7 +366,7 @@ class Decile:
     def get_cumprod(self):
         for _,group in self.df.groupby('decile'):
                   group['weighted_return']=group['average_return']+1
-                  self.df.loc[group.index,'average_return_cumprod']=group['weighted_return'].cumprod()
+                  self.df.loc[group.index,'average_return_cumprod']=group['weighted_return'].cumprod()  
         return self.df
     def get_cumsum(self):
         for _,group in self.df.groupby('decile'):
@@ -376,6 +375,7 @@ class Decile:
     def run(self):
            self.get_mean()
            self.get_cumprod()
+           self.df=self.df.dropna()
            return self.df,self.mean_df
     
 

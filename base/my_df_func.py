@@ -25,11 +25,13 @@ def set_return(df:pd.DataFrame,time_column:str='t_date',ticker_column:str='ticke
   为df添加一列return
   因为要通过load_df,所以输入无需排序
   '''
-  df=load_df(df,groupby_column=ticker_column,sort_column=time_column)
-  df[return_column]=df[close_column].pct_change(-1)
-  indices = df.groupby(ticker_column).apply(lambda x: x.tail(1).index).explode().values
-  df.loc[indices,return_column]=None
-  return df
+  df1=load_df(df,groupby_column=ticker_column,sort_column=time_column)
+  df1['next_day_close']=df1[close_column].shift(-1)
+  df1[return_column]=(df1['next_day_close']-df1[close_column])/df1[close_column]
+  df1.drop(columns=['next_day_close'],inplace=True)
+  indices = df1.groupby(ticker_column).apply(lambda x: x.tail(1).index).explode().values
+  df1.loc[indices,return_column]=None
+  return df1
 
 
 
